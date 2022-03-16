@@ -1,6 +1,4 @@
-
 #include <iostream>
-
 using namespace std;
 
 #include "FinalStatesClass.C"
@@ -8,7 +6,7 @@ using namespace std;
 #include "TLorentzVector.h"
 #include "classes/DelphesClasses.h"
 
-Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue) {
+Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* lepTrue, TLorentzVector* Q1True, TLorentzVector* Q2True) {
     GenParticle* particle;
     GenParticle* particle0;
     GenParticle* particle0M;
@@ -59,11 +57,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue) {
                 Int_t iM = particle0->M1;
                 particle0M = (GenParticle*)branchParticle->At(iM);
                 if (abs(particle0->PID) <= 8) {
-                    Int_t dummy = 0;
                     while (true) {
-                        if (dummy >= 10000) break;
-                        dummy += 1;
-
                         if (abs(particle0M->PID) == 9900012) {
                             if (abs(particle0->PID) % 2 == 1) {  // odd: down type quark
                                 // cout << "down: " << particle0->PID << endl;
@@ -93,6 +87,23 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue) {
                 iFSTrue_.iJet1 = iQ1True;
                 iFSTrue_.iJet2 = iQ2True;
                 *iFSTrue = iFSTrue_;
+
+                TLorentzVector lepTrue_, Q1True_, Q2True_;
+                GenParticle* lepParticle;
+                GenParticle* Q1Particle;
+                GenParticle* Q2Particle;
+                lepParticle = (GenParticle*)branchParticle->At(iLepTrue);
+                Q1Particle = (GenParticle*)branchParticle->At(iQ1True);
+                Q2Particle = (GenParticle*)branchParticle->At(iQ2True);
+
+                lepTrue_.SetPtEtaPhiE(lepParticle->PT, lepParticle->Eta, lepParticle->Phi, lepParticle->E);
+                Q1True_.SetPtEtaPhiE(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, Q1Particle->E);
+                Q2True_.SetPtEtaPhiE(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, Q2Particle->E);
+
+                *lepTrue = lepTrue_;
+                *Q1True = Q1True_;
+                *Q2True = Q2True_;
+
                 return 1;
             }
         }
