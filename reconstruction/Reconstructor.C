@@ -21,6 +21,7 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchTrack, TClonesArray* branc
     Jet* jet1;
     Jet* jet2;
 
+    iFinalStatesIndexes.nJets = nJets;
     // required 2 jets event
     if (nJets != 2) return iFinalStatesIndexes;
 
@@ -39,8 +40,9 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchTrack, TClonesArray* branc
             iLep = it;
         }
     }
-    // required only one lepton, either muon or electron
-    if (nMu + nEle != 1) return iFinalStatesIndexes;
+    // cout << "nLep: " << nMu + nEle << endl;
+    //  required only one lepton, either muon or electron
+    if (nMu + nEle < 1) return iFinalStatesIndexes;
 
     jet1 = (Jet*)branchJet->At(0);
     jet2 = (Jet*)branchJet->At(1);

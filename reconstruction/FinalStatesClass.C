@@ -2,6 +2,7 @@
 
 struct iFinalStates {
     Int_t foundAll = 0;
+    Int_t nJets = 0;
     Int_t foundLep = 0;
     Float_t mLep = 0;
     Int_t iLep = 99999;

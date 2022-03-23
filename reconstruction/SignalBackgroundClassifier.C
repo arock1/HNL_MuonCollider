@@ -6,7 +6,7 @@ using namespace std;
 #include "TLorentzVector.h"
 #include "classes/DelphesClasses.h"
 
-Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* lepTrue, TLorentzVector* Q1True, TLorentzVector* Q2True) {
+Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* lepTrue, TLorentzVector* Q1True, TLorentzVector* Q2True, TLorentzVector* NTrue) {
     GenParticle* particle;
     GenParticle* particle0;
     GenParticle* particle0M;
@@ -35,7 +35,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
         if (abs(particle->PID) == 9900012) {
             particleNM1 = (GenParticle*)branchParticle->At(particle->M1);
             particleNM2 = (GenParticle*)branchParticle->At(particle->M2);
-            // cout << "N1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n\n";
+            // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
 
             // cout << "found N1" << endl;
             foundN1 = 1;
@@ -43,7 +43,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
 
             for (Int_t i = 0; i < nParticles; i++) {
                 particle0 = (GenParticle*)branchParticle->At(i);
-                if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13 || abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
+                if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
                     // cout << "Found Lepton: " << particle0->PID << endl;
                     foundLep = 1;
                     iLepTrue = i;
@@ -88,21 +88,25 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 iFSTrue_.iJet2 = iQ2True;
                 *iFSTrue = iFSTrue_;
 
-                TLorentzVector lepTrue_, Q1True_, Q2True_;
+                TLorentzVector lepTrue_, Q1True_, Q2True_, NTrue_;
                 GenParticle* lepParticle;
                 GenParticle* Q1Particle;
                 GenParticle* Q2Particle;
+                GenParticle* NParticle;
                 lepParticle = (GenParticle*)branchParticle->At(iLepTrue);
                 Q1Particle = (GenParticle*)branchParticle->At(iQ1True);
                 Q2Particle = (GenParticle*)branchParticle->At(iQ2True);
+                NParticle = (GenParticle*)branchParticle->At(iNTrue);
 
                 lepTrue_.SetPtEtaPhiE(lepParticle->PT, lepParticle->Eta, lepParticle->Phi, lepParticle->E);
                 Q1True_.SetPtEtaPhiE(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, Q1Particle->E);
                 Q2True_.SetPtEtaPhiE(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, Q2Particle->E);
+                NTrue_.SetPtEtaPhiE(NParticle->PT, NParticle->Eta, NParticle->Phi, NParticle->E);
 
                 *lepTrue = lepTrue_;
                 *Q1True = Q1True_;
                 *Q2True = Q2True_;
+                *NTrue = NTrue_;
 
                 return 1;
             }

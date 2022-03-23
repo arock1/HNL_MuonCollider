@@ -21,19 +21,26 @@ using namespace std;
 R__ADD_LIBRARY_PATH($DELPHES)
 R__LOAD_LIBRARY(libDelphes)
 
-void inv_mass_jjl(
+void allinone(
     const string type,
     const Bool_t save = false,
     Int_t num_test = 0) {
     const char* inputFile;
     const char* outputFile;
 
-    if (type == "s1") {
-        inputFile = "./signal_pythia8_events_1TeV.root";
-        outputFile = "./signal_reco_1TeV.root";
-    } else if (type == "b1") {
-        inputFile = "./background_pythia8_events_1TeV.root";
-        outputFile = "./background_reco_1TeV.root";
+    outputFile = "../features/dummy.root";
+    if (type == "s14_1") {
+        inputFile = "../data/signal_pythia8_events_14TeV_1TeV.root";
+        outputFile = "../features/signal_reco_14TeV_1TeV.root";
+    } else if (type == "s14_2") {
+        inputFile = "../data/signal_pythia8_events_14TeV_2TeV.root";
+        outputFile = "../features/signal_reco_14TeV_2TeV.root";
+    } else if (type == "b14") {
+        inputFile = "../data/background_pythia8_events_14TeV.root";
+        outputFile = "../features/background_reco_14TeV.root";
+    } else {
+        cout << "Wrong input" << endl;
+        return;
     }
 
     // Load lib, and read data
@@ -83,16 +90,15 @@ void inv_mass_jjl(
         iFinalStates iFSTrue;
         TLorentzVector lepTrue, jet1True_, jet2True_, NTrue;
         Int_t passing = 0;
-        if (type == "s1") {
-            passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_);
-        } else if (type == "b1") {
+        if (type.at(0) == 's') {
+            passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_, &NTrue);
+        } else {
             passing = 1;
         }
 
         if (passing == 0) continue;
         nEv += 1;
 
-        NTrue = lepTrue + jet1True_ + jet2True_;
         TLorentzVector jjTrue;
         jjTrue = jet1True_ + jet2True_;
 
@@ -130,7 +136,8 @@ void inv_mass_jjl(
         nLepEta += 1;
         if (not(lep.Pt() >= 200)) continue;
         nLepPt += 1;
-        if (not(jet1.Pt() >= 100 || jet2.Pt() >= 100)) continue;
+
+        // if (not(jet1.Pt() >= 100 || jet2.Pt() >= 100)) continue;
         if (not(jet1.Pt() >= 50 && jet2.Pt() >= 50)) continue;
         nJetPt += 1;
 
@@ -190,6 +197,9 @@ void inv_mass_jjl(
         features->DeltaRjj = DeltaRjj;
         features->DeltaRjjl = DeltaRjjl;
         features->mN = N.M();
+        features->ptN = N.Pt();
+        features->etaN = N.Eta();
+        features->phiN = N.Phi();
 
         features->ptLepTrue = lepTrue.Pt();
         features->etaLepTrue = lepTrue.Eta();
@@ -202,6 +212,10 @@ void inv_mass_jjl(
         features->phiJet2True = jet2True.Phi();
         features->DeltaRjjTrue = DeltaRjjTrue;
         features->DeltaRjjlTrue = DeltaRjjlTrue;
+        features->mNTrue = NTrue.M();
+        features->ptNTrue = NTrue.Pt();
+        features->etaNTrue = NTrue.Eta();
+        features->phiNTrue = NTrue.Phi();
 
         tr.Fill();
     }
@@ -213,6 +227,9 @@ void inv_mass_jjl(
     cout << "# after lepton eta cut:              " << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
     cout << "# after lepton pt cut:               " << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
     cout << "# after jet pt cut:                  " << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
+    cout << endl;
+    cout << "Total eff.:                          " << nJetPt << "/" << nEv << "\t(" << 100 * float(nJetPt) / float(nEv) << "%)" << endl;
+
     tr.Write();
     fea.Close();
 }

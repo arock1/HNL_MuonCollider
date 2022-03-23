@@ -13,6 +13,9 @@ public:
     Float_t DeltaRjj;
     Float_t DeltaRjjl;
     Float_t mN;
+    Float_t ptN;
+    Float_t etaN;
+    Float_t phiN;
 
     Float_t ptLepTrue;
     Float_t etaLepTrue;
@@ -25,4 +28,8 @@ public:
     Float_t phiJet2True;
     Float_t DeltaRjjTrue;
     Float_t DeltaRjjlTrue;
+    Float_t mNTrue;
+    Float_t ptNTrue;
+    Float_t etaNTrue;
+    Float_t phiNTrue;
 };
