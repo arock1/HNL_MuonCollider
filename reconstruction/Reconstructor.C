@@ -28,21 +28,30 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchTrack, TClonesArray* branc
     Int_t iLep = 99999;
     Int_t nEle = 0;
     Int_t nMu = 0;
+    // TODO: if more than one lepton, need to pick one. Using highest pT?
+    Float_t ptMax = 0;
     for (Int_t it = 0; it < nTracks; it++) {
         track1 = (Track*)branchTrack->At(it);
         // muon
         if (abs(track1->PID) == 13) {
             nMu += 1;
-            iLep = it;
+            if (ptMax < track1->PT) {
+                ptMax = track1->PT;
+                iLep = it;
+            }
             // electron
         } else if (abs(track1->PID) == 11) {
             nEle += 1;
-            iLep = it;
+            if (ptMax < track1->PT) {
+                ptMax = track1->PT;
+                iLep = it;
+            }
         }
     }
     // cout << "nLep: " << nMu + nEle << endl;
     //  required only one lepton, either muon or electron
     if (nMu + nEle < 1) return iFinalStatesIndexes;
+    // if (nMu + nEle != 1) return iFinalStatesIndexes;
 
     jet1 = (Jet*)branchJet->At(0);
     jet2 = (Jet*)branchJet->At(1);
