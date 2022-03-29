@@ -29,15 +29,22 @@ void allinone(
     const char* outputFile;
 
     outputFile = "../features/dummy.root";
-    if (type == "s14_1") {
-        inputFile = "../data/signal_pythia8_events_14TeV_1TeV.root";
-        outputFile = "../features/signal_reco_14TeV_1TeV.root";
-    } else if (type == "s14_2") {
-        inputFile = "../data/signal_pythia8_events_14TeV_2TeV.root";
-        outputFile = "../features/signal_reco_14TeV_2TeV.root";
-    } else if (type == "b14") {
-        inputFile = "../data/background_pythia8_events_14TeV.root";
-        outputFile = "../features/background_reco_14TeV.root";
+    if (type == "s3_1") {
+        // inputFile = "../data/signal_E-3TeV_N-1TeV.root";
+        inputFile = "../data/signal_E-3TeV_N-1TeV_testJet.root";
+        outputFile = "../features/signal_reco_E-3TeV_N-1TeV.root";
+    } else if (type == "s10_1") {
+        // inputFile = "../data/signal_E-10TeV_N-1TeV.root";
+        inputFile = "../data/signal_E-10TeV_N-1TeV_testJet.root";
+        outputFile = "../features/signal_reco_E-10TeV_N-1TeV.root";
+    } else if (type == "b3") {
+        // inputFile = "../data/background_inclusive_E-3TeV.root";
+        inputFile = "../data/background_inclusive_E-3TeV_testJet.root";
+        outputFile = "../features/background_reco_E-3TeV.root";
+    } else if (type == "b10") {
+        // inputFile = "../data/background_inclusive_E-10TeV.root";
+        inputFile = "../data/background_inclusive_E-10TeV_testJet.root";
+        outputFile = "../features/background_reco_E-10TeV.root";
     } else {
         cout << "Wrong input" << endl;
         return;
@@ -53,8 +60,9 @@ void allinone(
     // clone the branches
     TClonesArray* branchParticle = treeReader->UseBranch("Particle");
     TClonesArray* branchTrack = treeReader->UseBranch("Track");
-    // TClonesArray* branchJet = treeReader->UseBranch("KTjet");
-    TClonesArray* branchJet = treeReader->UseBranch("VLCjetR05N2");
+    TClonesArray* branchKTJet = treeReader->UseBranch("KTjet");
+    TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
+    TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
     // TClonesArray* branchJet = treeReader->UseBranch("VLCjetR12N2");
     // TClonesArray* branchJet = treeReader->UseBranch("GenJet");
     TClonesArray* branchEFlowPhoton = treeReader->UseBranch("EFlowPhoton");
@@ -77,6 +85,10 @@ void allinone(
     Int_t nLepEta = 0;
     Int_t nLepPt = 0;
     Int_t nJetPt = 0;
+
+    Float_t lepEtaCut = 2.5;
+    Float_t lepPtCut = 200;
+    Float_t jetPtCut = 50;
 
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
         // progress
@@ -107,76 +119,72 @@ void allinone(
         //========================================================================
         iFinalStates iFS;
         // finding final states: lepton + 2jets
-        iFS = FindFinalStatesIndex(branchTrack, branchJet);
+        // iFS = FindFinalStatesIndex(branchTrack, branchJet);
+        iFS = FindFinalStatesIndex(branchTrack, branchVLC1Jet, branchVLC2Jet);
         if (iFS.foundAll == 0) continue;
         nFS += 1;
+        // if (iFS.nJets != 2) continue;
+
+        TLorentzVector lep, jet1, jet2, jj, N;
 
         Track* lepTrack = (Track*)branchTrack->At(iFS.iLep);
-        Jet* jet1Jet = (Jet*)branchJet->At(iFS.iJet1);
-        Jet* jet2Jet = (Jet*)branchJet->At(iFS.iJet2);
-
-        TLorentzVector lep, jet1, jet2, N;
-
         lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLep);
-        jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
-        jet2.SetPtEtaPhiM(jet2Jet->PT, jet2Jet->Eta, jet2Jet->Phi, jet2Jet->Mass);
 
-        N = jet1 + jet2 + lep;
-        TLorentzVector jj;
-        jj = jet1 + jet2;
+        if (iFS.nJets == 1) {
+            Jet* jet1Jet = (Jet*)branchVLC1Jet->At(iFS.iJet1);
+            jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
+            jj = jet1;
+        } else if (iFS.nJets == 2) {
+            Jet* jet1Jet = (Jet*)branchVLC2Jet->At(iFS.iJet1);
+            Jet* jet2Jet = (Jet*)branchVLC2Jet->At(iFS.iJet2);
+            jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
+            jet2.SetPtEtaPhiM(jet2Jet->PT, jet2Jet->Eta, jet2Jet->Phi, jet2Jet->Mass);
+            jj = jet1 + jet2;
+        }
+        N = jj + lep;
 
         //========================================================================
         //=======================           Cuts           =======================
         //========================================================================
-        // require in same direction
-        // if (not(lep.Px() * jet1.Px() + lep.Py() * jet1.Py() + lep.Pz() * jet1.Pz() >= 0)) continue;
-        // if (not(lep.Px() * jet2.Px() + lep.Py() * jet2.Py() + lep.Pz() * jet2.Pz() >= 0)) continue;
-        // if (not(jet2.Px() * jet1.Px() + jet2.Py() * jet1.Py() + jet2.Pz() * jet1.Pz() >= 0)) continue;
-        if (not(abs(lep.Eta()) <= 2.5)) continue;
+        // if (not(abs(lep.Eta()) <= lepEtaCut)) continue;
         nLepEta += 1;
-        if (not(lep.Pt() >= 200)) continue;
+
+        // if (not(lep.Pt() >= lepPtCut)) continue;
         nLepPt += 1;
 
-        // if (not(jet1.Pt() >= 100 || jet2.Pt() >= 100)) continue;
-        if (not(jet1.Pt() >= 50 && jet2.Pt() >= 50)) continue;
+        // if (not(abs(jj.M() - 80.379) < 10)) continue;
+
+        // if (not(jet1.Pt() >= jetPtCut && jet2.Pt() >= jetPtCut)) continue;
         nJetPt += 1;
 
-        /*
-        cout << jet1.Eta() << "; " << jet1True.Eta() << endl;
-        cout << jet2.Eta() << "; " << jet2True.Eta() << endl;
-        cout << jet1.E() * jet1.E() - jet1.P() * jet1.P() << "; " << jet2.E() * jet2.E() - jet2.P() * jet2.P() << endl;
-        cout << jet1True.E() * jet1True.E() - jet1True.P() * jet1True.P() << "; " << jet2True.E() * jet2True.E() - jet2True.P() * jet2True.P() << endl;
-        cout << endl;
-        cout << jj.Eta() << "; " << jjTrue.Eta() << endl;
-        cout << endl;
-        cout << N.M() << "; " << NTrue.M() << endl;
-
-        cout << endl;
-        cout << endl;
-        cout << endl;
-        */
         //========================================================================
         //=======================         Features         =======================
         //========================================================================
+
         TLorentzVector jet1True, jet2True;
-        if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
+        Float_t DeltaRjj, DeltaRjjl;
+        if (iFS.nJets == 2) {
+            if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
+                jet1True = jet1True_;
+                jet2True = jet2True_;
+            } else {
+                jet1True = jet2True_;
+                jet2True = jet1True_;
+            }
+            Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
+            Float_t jjPhiDiff = jet1.Phi() - jet2.Phi();
+            DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
+
+        } else if (iFS.nJets == 1) {
             jet1True = jet1True_;
             jet2True = jet2True_;
-        } else {
-            jet1True = jet2True_;
-            jet2True = jet1True_;
         }
 
-        Float_t DeltaRjj, DeltaRjjl;
-        Float_t DeltaRjjTrue, DeltaRjjlTrue;
-
-        Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
-        Float_t jjPhiDiff = jet1.Phi() - jet2.Phi();
-        DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
         Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
         Float_t jjlPhiDiff = jj.Phi() - lep.Phi();
         DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
 
+        Float_t DeltaRjjTrue, DeltaRjjlTrue;
         Float_t jjEtaDiffTrue = jet1True.Eta() - jet2True.Eta();
         Float_t jjPhiDiffTrue = jet1True.Phi() - jet2True.Phi();
         DeltaRjjTrue = pow(jjEtaDiffTrue * jjEtaDiffTrue + jjPhiDiffTrue * jjPhiDiffTrue, 0.5);
@@ -188,14 +196,28 @@ void allinone(
         features->ptLep = lep.Pt();
         features->etaLep = lep.Eta();
         features->phiLep = lep.Phi();
+        features->ELep = lep.E();
+
         features->ptJet1 = jet1.Pt();
         features->etaJet1 = jet1.Eta();
         features->phiJet1 = jet1.Phi();
+        features->EJet1 = jet1.E();
+
         features->ptJet2 = jet2.Pt();
         features->etaJet2 = jet2.Eta();
         features->phiJet2 = jet2.Phi();
+        features->EJet2 = jet2.E();
+
         features->DeltaRjj = DeltaRjj;
         features->DeltaRjjl = DeltaRjjl;
+        if (iFS.nJets == 2) features->DeltaRjj = DeltaRjj;
+        if (iFS.nJets == 2) features->DeltaRjjl = DeltaRjjl;
+
+        features->nJets = iFS.nJets;
+        features->mJJ = jj.M();
+        features->ptJJ = jj.Pt();
+        features->etaJJ = jj.Eta();
+        features->phiJJ = jj.Phi();
         features->mN = N.M();
         features->ptN = N.Pt();
         features->etaN = N.Eta();
@@ -204,14 +226,24 @@ void allinone(
         features->ptLepTrue = lepTrue.Pt();
         features->etaLepTrue = lepTrue.Eta();
         features->phiLepTrue = lepTrue.Phi();
+        features->ELepTrue = lepTrue.E();
+
         features->ptJet1True = jet1True.Pt();
         features->etaJet1True = jet1True.Eta();
         features->phiJet1True = jet1True.Phi();
+        features->EJet1True = jet1True.E();
+
         features->ptJet2True = jet2True.Pt();
         features->etaJet2True = jet2True.Eta();
         features->phiJet2True = jet2True.Phi();
+        features->EJet2True = jet2True.E();
+
         features->DeltaRjjTrue = DeltaRjjTrue;
         features->DeltaRjjlTrue = DeltaRjjlTrue;
+        features->mJJTrue = jjTrue.M();
+        features->ptJJTrue = jjTrue.Pt();
+        features->etaJJTrue = jjTrue.Eta();
+        features->phiJJTrue = jjTrue.Phi();
         features->mNTrue = NTrue.M();
         features->ptNTrue = NTrue.Pt();
         features->etaNTrue = NTrue.Eta();
@@ -222,13 +254,14 @@ void allinone(
 
     cout << "\n\n===== Done! =====\n\n";
 
-    cout << "# of targeted events in truth level: " << nEv << endl;
-    cout << "# after identified final states:     " << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
-    cout << "# after lepton eta cut:              " << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
-    cout << "# after lepton pt cut:               " << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
-    cout << "# after jet pt cut:                  " << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
+    cout << "# of targeted events in truth level:\t\t" << nEv << endl;
+    cout << "# after identified final states:\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
+    cout << "# after lepton eta cut (eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
+    cout << "# after lepton pt cut (pT(l)) >= " << float(lepPtCut) << "):\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
+    cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
     cout << endl;
-    cout << "Total eff.:                          " << nJetPt << "/" << nEv << "\t(" << 100 * float(nJetPt) / float(nEv) << "%)" << endl;
+    cout << "Total eff.:\t\t\t\t\t" << nJetPt << "/" << nEv << "\t(" << 100 * float(nJetPt) / float(nEv) << "%)" << endl;
+    cout << endl;
 
     tr.Write();
     fea.Close();
