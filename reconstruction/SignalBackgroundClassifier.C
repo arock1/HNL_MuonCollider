@@ -16,7 +16,9 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
     GenParticle* particleNM2;
 
     Int_t iNTrue = 99999;
-    Int_t foundN1 = 0;
+    Int_t foundN = 0;
+    Int_t iWTrue = 99999;
+    Int_t foundW = 0;
     Int_t iLepTrue = 99999;
     Int_t foundLep = 0;
     Int_t iQ1True = 99999;  // down type quark
@@ -28,7 +30,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
     // cout << "\n\n\n Num of p: " << nParticles << endl;
 
     for (Int_t iN = 0; iN < nParticles; iN++) {
-        foundN1 = 0;
+        foundN = 0;
         particle = (GenParticle*)branchParticle->At(iN);
         // cout << particle->PID << endl;
 
@@ -38,7 +40,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
             // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
 
             // cout << "found N1" << endl;
-            foundN1 = 1;
+            foundN = 1;
             iNTrue = iN;
 
             for (Int_t i = 0; i < nParticles; i++) {
@@ -79,13 +81,12 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 }
                 if (foundQ1 == 1 && foundQ2 == 1) break;
             }
-            if (foundN1 == 1 && foundQ1 == 1 && foundQ2 == 1) {
+            if (foundN == 1 && foundQ1 == 1 && foundQ2 == 1) {
                 // cout << "............" << endl;
                 iFinalStates iFSTrue_;
-                iFSTrue_.foundLep = 1;
-                iFSTrue_.iLep = iLepTrue;
-                iFSTrue_.iJet1 = iQ1True;
-                iFSTrue_.iJet2 = iQ2True;
+                iFSTrue_.iLeps.push_back(iLepTrue);
+                iFSTrue_.iJets.push_back(iQ1True);
+                iFSTrue_.iJets.push_back(iQ2True);
                 *iFSTrue = iFSTrue_;
 
                 TLorentzVector lepTrue_, Q1True_, Q2True_, NTrue_;

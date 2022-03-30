@@ -29,26 +29,48 @@ void allinone(
     const char* outputFile;
 
     outputFile = "../features/dummy.root";
-    if (type == "s3_1") {
+    if (type == "s3_01") {
+        // inputFile = "../data/signal_E-3TeV_N-01TeV.root";
+        inputFile = "../data/signal_E-3TeV_N-01TeV_CustomizedJet.root";
+        outputFile = "../features/signal_reco_E-3TeV_N-01TeV.root";
+    } else if (type == "s3_02") {
+        // inputFile = "../data/signal_E-3TeV_N-02TeV.root";
+        inputFile = "../data/signal_E-3TeV_N-02TeV_CustomizedJet.root";
+        outputFile = "../features/signal_reco_E-3TeV_N-02TeV.root";
+    } else if (type == "s3_05") {
+        // inputFile = "../data/signal_E-3TeV_N-05TeV.root";
+        inputFile = "../data/signal_E-3TeV_N-05TeV_CustomizedJet.root";
+        outputFile = "../features/signal_reco_E-3TeV_N-05TeV.root";
+    } else if (type == "s3_1") {
         // inputFile = "../data/signal_E-3TeV_N-1TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-1TeV_testJet.root";
+        inputFile = "../data/signal_E-3TeV_N-1TeV_CustomizedJet.root";
         outputFile = "../features/signal_reco_E-3TeV_N-1TeV.root";
+    } else if (type == "s3_2") {
+        // inputFile = "../data/signal_E-3TeV_N-2TeV.root";
+        inputFile = "../data/signal_E-3TeV_N-2TeV_CustomizedJet.root";
+        outputFile = "../features/signal_reco_E-3TeV_N-2TeV.root";
     } else if (type == "s10_1") {
         // inputFile = "../data/signal_E-10TeV_N-1TeV.root";
-        inputFile = "../data/signal_E-10TeV_N-1TeV_testJet.root";
+        inputFile = "../data/signal_E-10TeV_N-1TeV_CustomizedJet.root";
         outputFile = "../features/signal_reco_E-10TeV_N-1TeV.root";
+    } else if (type == "s10_2") {
+        // inputFile = "../data/signal_E-10TeV_N-2TeV.root";
+        inputFile = "../data/signal_E-10TeV_N-2TeV_CustomizedJet.root";
+        outputFile = "../features/signal_reco_E-10TeV_N-2TeV.root";
     } else if (type == "b3") {
         // inputFile = "../data/background_inclusive_E-3TeV.root";
-        inputFile = "../data/background_inclusive_E-3TeV_testJet.root";
+        inputFile = "../data/background_inclusive_E-3TeV_CustomizedJet.root";
         outputFile = "../features/background_reco_E-3TeV.root";
     } else if (type == "b10") {
         // inputFile = "../data/background_inclusive_E-10TeV.root";
-        inputFile = "../data/background_inclusive_E-10TeV_testJet.root";
+        inputFile = "../data/background_inclusive_E-10TeV_CustomizedJet.root";
         outputFile = "../features/background_reco_E-10TeV.root";
     } else {
         cout << "Wrong input" << endl;
         return;
     }
+
+    cout << "\nReading: " << inputFile << "\n\n";
 
     // Load lib, and read data
     gSystem->Load("libDelphes");
@@ -92,7 +114,8 @@ void allinone(
 
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
         // progress
-        if ((i_en % 1000) == 0) cout << "Reconstruction Progress: " << i_en << "/" << numberOfEntries << endl;
+        if ((i_en % 1000) == 0) cout << "Reconstruction Progress: " << i_en << "/" << numberOfEntries << "\r";
+        cout.flush();
 
         treeReader->ReadEntry(i_en);  // reading the entry
 
@@ -121,33 +144,55 @@ void allinone(
         // finding final states: lepton + 2jets
         // iFS = FindFinalStatesIndex(branchTrack, branchJet);
         iFS = FindFinalStatesIndex(branchTrack, branchVLC1Jet, branchVLC2Jet);
+
         if (iFS.foundAll == 0) continue;
         nFS += 1;
-        // if (iFS.nJets != 2) continue;
 
         TLorentzVector lep, jet1, jet2, jj, N;
 
-        Track* lepTrack = (Track*)branchTrack->At(iFS.iLep);
-        lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLep);
-
-        if (iFS.nJets == 1) {
-            Jet* jet1Jet = (Jet*)branchVLC1Jet->At(iFS.iJet1);
+        // if there is only one jet, then it is corresponding to the first index
+        // and the W is this only jet
+        // if there are two jets, then corresponding to the first and second index
+        // and the W is their sum
+        if (iFS.iJets.size() == 1) {
+            Jet* jet1Jet = (Jet*)branchVLC1Jet->At(iFS.iJets[0]);
             jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
             jj = jet1;
-        } else if (iFS.nJets == 2) {
-            Jet* jet1Jet = (Jet*)branchVLC2Jet->At(iFS.iJet1);
-            Jet* jet2Jet = (Jet*)branchVLC2Jet->At(iFS.iJet2);
+        } else if (iFS.iJets.size() == 2) {
+            Jet* jet1Jet = (Jet*)branchVLC2Jet->At(iFS.iJets[0]);
+            Jet* jet2Jet = (Jet*)branchVLC2Jet->At(iFS.iJets[1]);
             jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
             jet2.SetPtEtaPhiM(jet2Jet->PT, jet2Jet->Eta, jet2Jet->Phi, jet2Jet->Mass);
             jj = jet1 + jet2;
         }
+
+        // loop over all the leptons
+        Float_t ptLepMax = -99999;
+        Int_t foundLep = 0;
+        for (Int_t iLep = 0; iLep < iFS.iLeps.size(); iLep++) {
+            Track* lepTrack = (Track*)branchTrack->At(iFS.iLeps[iLep]);
+            if (not(abs(lepTrack->Eta) <= lepEtaCut)) continue;
+            Float_t DeltaRjjl;
+            Float_t jjlEtaDiff = jj.Eta() - lepTrack->Eta;
+            Float_t jjlPhiDiff = jj.Phi() - lepTrack->Phi;
+            DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
+            if (iFS.iJets.size() == 1 && DeltaRjjl < 1.2) continue;
+            if (iFS.iJets.size() == 2 && DeltaRjjl < 0.2) continue;
+
+            if (lepTrack->PT > ptLepMax) {
+                foundLep = 1;
+                ptLepMax = lepTrack->PT;
+                lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLeps[iLep]);
+            }
+        }
+        if (foundLep == 0) continue;
+        nLepEta += 1;
+
         N = jj + lep;
 
         //========================================================================
         //=======================           Cuts           =======================
         //========================================================================
-        // if (not(abs(lep.Eta()) <= lepEtaCut)) continue;
-        nLepEta += 1;
 
         // if (not(lep.Pt() >= lepPtCut)) continue;
         nLepPt += 1;
@@ -163,7 +208,7 @@ void allinone(
 
         TLorentzVector jet1True, jet2True;
         Float_t DeltaRjj, DeltaRjjl;
-        if (iFS.nJets == 2) {
+        if (iFS.iJets.size() == 2) {
             if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
                 jet1True = jet1True_;
                 jet2True = jet2True_;
@@ -175,7 +220,7 @@ void allinone(
             Float_t jjPhiDiff = jet1.Phi() - jet2.Phi();
             DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
 
-        } else if (iFS.nJets == 1) {
+        } else if (iFS.iJets.size() == 1) {
             jet1True = jet1True_;
             jet2True = jet2True_;
         }
@@ -210,10 +255,10 @@ void allinone(
 
         features->DeltaRjj = DeltaRjj;
         features->DeltaRjjl = DeltaRjjl;
-        if (iFS.nJets == 2) features->DeltaRjj = DeltaRjj;
-        if (iFS.nJets == 2) features->DeltaRjjl = DeltaRjjl;
+        if (iFS.iJets.size() == 2) features->DeltaRjj = DeltaRjj;
+        if (iFS.iJets.size() == 2) features->DeltaRjjl = DeltaRjjl;
 
-        features->nJets = iFS.nJets;
+        features->nJets = iFS.iJets.size();
         features->mJJ = jj.M();
         features->ptJJ = jj.Pt();
         features->etaJJ = jj.Eta();
@@ -251,8 +296,9 @@ void allinone(
 
         tr.Fill();
     }
+    cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\r";
 
-    cout << "\n\n===== Done! =====\n\n";
+    cout << "===============   Done!   ===============\n";
 
     cout << "# of targeted events in truth level:\t\t" << nEv << endl;
     cout << "# after identified final states:\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
@@ -261,8 +307,9 @@ void allinone(
     cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
     cout << endl;
     cout << "Total eff.:\t\t\t\t\t" << nJetPt << "/" << nEv << "\t(" << 100 * float(nJetPt) / float(nEv) << "%)" << endl;
-    cout << endl;
+    cout << "\n\n\n";
 
     tr.Write();
     fea.Close();
+    cout << "\nWriting: " << outputFile << "\n\n";
 }

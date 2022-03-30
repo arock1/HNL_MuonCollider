@@ -1,3 +1,5 @@
+
+#include "Rtypes.h"
 class Features {
 public:
     Int_t iEvt;

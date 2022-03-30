@@ -1,11 +1,13 @@
 #pragma once
 
+#include <vector>
+using namespace std;
+#include "Rtypes.h"
+
 struct iFinalStates {
     Int_t foundAll = 0;
-    Int_t nJets = 0;
-    Int_t foundLep = 0;
-    Float_t mLep = 0;
-    Int_t iLep = 99999;
-    Int_t iJet1 = 99999;
-    Int_t iJet2 = 99999;
+    Int_t iW;
+    vector<Int_t> iLeps;
+    vector<Float_t> mLeps;
+    vector<Int_t> iJets;
 };
