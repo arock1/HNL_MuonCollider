@@ -2,6 +2,7 @@
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <string>
 #include <vector>
 using namespace std;
 
@@ -21,56 +22,79 @@ using namespace std;
 R__ADD_LIBRARY_PATH($DELPHES)
 R__LOAD_LIBRARY(libDelphes)
 
+Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
+    string inputFile_st;
+    string outputFile_st;
+
+    if (type.at(0) == 'b') {
+        inputFile_st = "../data/background_inclusive_E-";
+        inputFile_st += type.substr(1, -1);
+        inputFile_st += "TeV_CustomizedJet.root";
+
+        outputFile_st = "../features/background_reco_E-";
+        outputFile_st += type.substr(1, -1);
+        outputFile_st += "TeV.root";
+
+        *inputFile_st_ = inputFile_st;
+        *outputFile_st_ = outputFile_st;
+        return 1;
+
+    } else if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {
+        cout << "Processing Signal data" << endl;
+        Int_t pos = type.find("_");
+        if (type.at(0) == 'i') {
+            inputFile_st = "../data/signal_E-";
+        } else if (type.at(0) == 's') {
+            inputFile_st = "../data/signal_schannel_E-";
+        } else if (type.at(0) == 't') {
+            inputFile_st = "../data/signal_tchannel_E-";
+        }
+        inputFile_st += type.substr(1, pos - 1);
+        inputFile_st += "TeV_N-";
+        inputFile_st += type.substr(pos + 1, -1);
+        inputFile_st += "TeV_CustomizedJet.root";
+
+        if (type.at(0) == 'i') {
+            outputFile_st = "../features/signal_reco_E-";
+        } else if (type.at(0) == 's') {
+            outputFile_st = "../features/signal_schannel_reco_E-";
+        } else if (type.at(0) == 't') {
+            outputFile_st = "../features/signal_tchannel_reco_E-";
+        }
+        outputFile_st += type.substr(1, pos - 1);
+        outputFile_st += "TeV_N-";
+        outputFile_st += type.substr(pos + 1, -1);
+        outputFile_st += "TeV.root";
+        *inputFile_st_ += inputFile_st;
+        *outputFile_st_ = outputFile_st;
+        return 1;
+
+    } else {
+        cout << "Wrong input type" << endl;
+        return 0;
+    }
+}
+
 void allinone(
     const string type,
     const Bool_t save = false,
     Int_t num_test = 0) {
-    const char* inputFile;
-    const char* outputFile;
+    // formmating the input output files
+    string inputFile_st;
+    string outputFile_st;
 
-    outputFile = "../features/dummy.root";
-    if (type == "s3_01") {
-        // inputFile = "../data/signal_E-3TeV_N-01TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-01TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-3TeV_N-01TeV.root";
-    } else if (type == "s3_02") {
-        // inputFile = "../data/signal_E-3TeV_N-02TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-02TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-3TeV_N-02TeV.root";
-    } else if (type == "s3_05") {
-        // inputFile = "../data/signal_E-3TeV_N-05TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-05TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-3TeV_N-05TeV.root";
-    } else if (type == "s3_1") {
-        // inputFile = "../data/signal_E-3TeV_N-1TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-1TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-3TeV_N-1TeV.root";
-    } else if (type == "s3_2") {
-        // inputFile = "../data/signal_E-3TeV_N-2TeV.root";
-        inputFile = "../data/signal_E-3TeV_N-2TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-3TeV_N-2TeV.root";
-    } else if (type == "s10_1") {
-        // inputFile = "../data/signal_E-10TeV_N-1TeV.root";
-        inputFile = "../data/signal_E-10TeV_N-1TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-10TeV_N-1TeV.root";
-    } else if (type == "s10_2") {
-        // inputFile = "../data/signal_E-10TeV_N-2TeV.root";
-        inputFile = "../data/signal_E-10TeV_N-2TeV_CustomizedJet.root";
-        outputFile = "../features/signal_reco_E-10TeV_N-2TeV.root";
-    } else if (type == "b3") {
-        // inputFile = "../data/background_inclusive_E-3TeV.root";
-        inputFile = "../data/background_inclusive_E-3TeV_CustomizedJet.root";
-        outputFile = "../features/background_reco_E-3TeV.root";
-    } else if (type == "b10") {
-        // inputFile = "../data/background_inclusive_E-10TeV.root";
-        inputFile = "../data/background_inclusive_E-10TeV_CustomizedJet.root";
-        outputFile = "../features/background_reco_E-10TeV.root";
-    } else {
-        cout << "Wrong input" << endl;
-        return;
-    }
+    Int_t foundFiles;
+    foundFiles = getFileNames(type, &inputFile_st, &outputFile_st);
+
+    const char* inputFile = inputFile_st.c_str();
+    const char* outputFile = outputFile_st.c_str();
+    if (not save) outputFile = "../dummy.root";
 
     cout << "\nReading: " << inputFile << "\n\n";
+    if (gSystem->AccessPathName(inputFile)) {
+        cout << "inputFile: " << inputFile << " does not exist" << endl;
+        return;
+    }
 
     // Load lib, and read data
     gSystem->Load("libDelphes");
@@ -85,8 +109,6 @@ void allinone(
     TClonesArray* branchKTJet = treeReader->UseBranch("KTjet");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
-    // TClonesArray* branchJet = treeReader->UseBranch("VLCjetR12N2");
-    // TClonesArray* branchJet = treeReader->UseBranch("GenJet");
     TClonesArray* branchEFlowPhoton = treeReader->UseBranch("EFlowPhoton");
     TClonesArray* branchEFlowNeutralHadron = treeReader->UseBranch("EFlowNeutralHadron");
 
@@ -125,7 +147,7 @@ void allinone(
         iFinalStates iFSTrue;
         TLorentzVector lepTrue, jet1True_, jet2True_, NTrue;
         Int_t passing = 0;
-        if (type.at(0) == 's') {
+        if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {
             passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_, &NTrue);
         } else {
             passing = 1;
@@ -141,8 +163,7 @@ void allinone(
         //=======================      Reconstruction      =======================
         //========================================================================
         iFinalStates iFS;
-        // finding final states: lepton + 2jets
-        // iFS = FindFinalStatesIndex(branchTrack, branchJet);
+        // finding final states: lepton + 1 (or 2) jet
         iFS = FindFinalStatesIndex(branchTrack, branchVLC1Jet, branchVLC2Jet);
 
         if (iFS.foundAll == 0) continue;
@@ -171,23 +192,44 @@ void allinone(
         Int_t foundLep = 0;
         for (Int_t iLep = 0; iLep < iFS.iLeps.size(); iLep++) {
             Track* lepTrack = (Track*)branchTrack->At(iFS.iLeps[iLep]);
+            // eta cut
             if (not(abs(lepTrack->Eta) <= lepEtaCut)) continue;
-            Float_t DeltaRjjl;
-            Float_t jjlEtaDiff = jj.Eta() - lepTrack->Eta;
-            Float_t jjlPhiDiff = jj.Phi() - lepTrack->Phi;
-            DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
-            if (iFS.iJets.size() == 1 && DeltaRjjl < 1.2) continue;
-            if (iFS.iJets.size() == 2 && DeltaRjjl < 0.2) continue;
 
+            // exclude the lepton, if it is inside the jet cone
+            // Float_t DeltaRjjl;
+            // Float_t jjlEtaDiff = jj.Eta() - lepTrack->Eta;
+            // Float_t jjlPhiDiff = jj.Phi() - lepTrack->Phi;
+            // DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
+            // if (iFS.iJets.size() == 1 && DeltaRjjl < 1.2) continue;
+            // if (iFS.iJets.size() == 2 && DeltaRjjl < 0.2) continue;
+
+            // Int_t nTracks = branchTrack->GetEntries();
+            // Float_t closestDeltaR = 99999;
+            // for (Int_t itr = 0; itr < nTracks; itr++) {
+            // if (itr == iFS.iLeps[iLep]) continue;
+            // Float_t DeltaRanyl;
+            // Track* anyTrack = (Track*)branchTrack->At(itr);
+            // Float_t anylEtaDiff = anyTrack->Eta - lepTrack->Eta;
+            // Float_t anylPhiDiff = anyTrack->Phi - lepTrack->Phi;
+            // DeltaRanyl = pow(anylEtaDiff * anylEtaDiff + anylPhiDiff * anylPhiDiff, 0.5);
+            // if (DeltaRanyl < closestDeltaR) closestDeltaR = DeltaRanyl;
+            //}
+            //// cout << closestDeltaR << endl;
+            //// cout << endl;
+            // if (closestDeltaR < 1) continue;
+
+            // store the lepton with max. pT among all
             if (lepTrack->PT > ptLepMax) {
                 foundLep = 1;
                 ptLepMax = lepTrack->PT;
                 lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLeps[iLep]);
             }
         }
+        // if no such lepton, then pass
         if (foundLep == 0) continue;
         nLepEta += 1;
 
+        // reconstruct N
         N = jj + lep;
 
         //========================================================================
