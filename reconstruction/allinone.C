@@ -22,13 +22,14 @@ using namespace std;
 R__ADD_LIBRARY_PATH($DELPHES)
 R__LOAD_LIBRARY(libDelphes)
 
+// Formatting input and output file name, based on the input "type" variable {{{
 Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
     string inputFile_st;
     string outputFile_st;
 
-    if (type.at(0) == 'b') {
+    if (type.at(0) == 'b') {  // background (e.g. "b3": background with E=3TeV)
         inputFile_st = "../data/background_inclusive_E-";
-        inputFile_st += type.substr(1, -1);
+        inputFile_st += type.substr(1, -1);  // energy (sqrt s)
         inputFile_st += "TeV_CustomizedJet.root";
 
         outputFile_st = "../features/background_reco_E-";
@@ -39,14 +40,14 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         *outputFile_st_ = outputFile_st;
         return 1;
 
-    } else if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {
+    } else if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // signals
         cout << "Processing Signal data" << endl;
         Int_t pos = type.find("_");
-        if (type.at(0) == 'i') {
+        if (type.at(0) == 'i') {  // inclusive signal (e.g. "i3_01": inclusive signal with E=3TeV, mN=0.1TeV)
             inputFile_st = "../data/signal_E-";
-        } else if (type.at(0) == 's') {
+        } else if (type.at(0) == 's') {  // s-channel
             inputFile_st = "../data/signal_schannel_E-";
-        } else if (type.at(0) == 't') {
+        } else if (type.at(0) == 't') {  // t-channel
             inputFile_st = "../data/signal_tchannel_E-";
         }
         inputFile_st += type.substr(1, pos - 1);
@@ -74,6 +75,7 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         return 0;
     }
 }
+///}}}
 
 void allinone(
     const string type,
@@ -118,21 +120,31 @@ void allinone(
     Tower* eflowphoton;
     Tower* eflowneutralhadron;
 
+    // book feature storing tree and file
     TFile fea(outputFile, "recreate");
     TTree tr("t", "features");
     Features* features = new Features;
     tr.Branch("features", &features);
 
     if (num_test == 0) num_test = numberOfEntries;
-    Int_t nEv = 0;
-    Int_t nFS = 0;
-    Int_t nLepEta = 0;
-    Int_t nLepPt = 0;
-    Int_t nJetPt = 0;
 
-    Float_t lepEtaCut = 2.5;
-    Float_t lepPtCut = 200;
-    Float_t jetPtCut = 50;
+    // tracing the number of events are each cut
+    Int_t nEv = 0;      // # of events in truth level
+    Int_t nFS = 0;      // # of events having identified final states
+    Int_t nLepEta = 0;  // # of events after lep eta cut
+    Int_t nLepPt = 0;   // # of events after lep pt cut
+    Int_t nJJPt = 0;    // # of events after jj pt cut
+    Int_t nJJM = 0;     // # of events after jj mas cut
+
+    Float_t lepEtaCut = 2.5;  // lep eta cut
+    Float_t lepPtCut = 100;   // lep pt cut
+    Float_t jjPtCut = 100;    // jj pt cut
+
+    Float_t mW = 80.379;
+    Float_t mWWidth = 2.085;
+
+    Float_t jjMLowCut = mW - 5 * mWWidth;   // jj mass cut
+    Float_t jjMHighCut = mW + 5 * mWWidth;  // jj mass cut
 
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
         // progress
@@ -150,7 +162,7 @@ void allinone(
         if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {
             passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_, &NTrue);
         } else {
-            passing = 1;
+            passing = ClassifyiBackground(branchParticle);
         }
 
         if (passing == 0) continue;
@@ -189,6 +201,7 @@ void allinone(
 
         // loop over all the leptons
         Float_t ptLepMax = -99999;
+        Int_t chargeLep;
         Int_t foundLep = 0;
         for (Int_t iLep = 0; iLep < iFS.iLeps.size(); iLep++) {
             Track* lepTrack = (Track*)branchTrack->At(iFS.iLeps[iLep]);
@@ -220,6 +233,7 @@ void allinone(
 
             // store the lepton with max. pT among all
             if (lepTrack->PT > ptLepMax) {
+                chargeLep = lepTrack->Charge;
                 foundLep = 1;
                 ptLepMax = lepTrack->PT;
                 lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLeps[iLep]);
@@ -236,19 +250,21 @@ void allinone(
         //=======================           Cuts           =======================
         //========================================================================
 
-        // if (not(lep.Pt() >= lepPtCut)) continue;
+        if (not(lep.Pt() >= lepPtCut)) continue;
         nLepPt += 1;
 
-        // if (not(abs(jj.M() - 80.379) < 10)) continue;
+        if (not(jj.Pt() >= jjPtCut)) continue;
+        nJJPt += 1;
 
-        // if (not(jet1.Pt() >= jetPtCut && jet2.Pt() >= jetPtCut)) continue;
-        nJetPt += 1;
+        if (not(jj.M() >= jjMLowCut && jj.M() <= jjMHighCut)) continue;
+        nJJM += 1;
 
         //========================================================================
         //=======================         Features         =======================
         //========================================================================
 
-        TLorentzVector jet1True, jet2True;
+        TLorentzVector jet1True,
+            jet2True;
         Float_t DeltaRjj, DeltaRjjl;
         if (iFS.iJets.size() == 2) {
             if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
@@ -336,19 +352,30 @@ void allinone(
         features->etaNTrue = NTrue.Eta();
         features->phiNTrue = NTrue.Phi();
 
+        features->chargeLep = chargeLep;
+        if (type.at(0) != 'b') {
+            GenParticle* lTrue = (GenParticle*)branchParticle->At(iFSTrue.iLeps[0]);
+            features->chargeLepTrue = lTrue->Charge;
+        }
+
         tr.Fill();
     }
     cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\r";
 
-    cout << "===============   Done!   ===============\n";
+    cout << "---------------------------------------------------------------------------------" << endl;
+    cout << "==============================       Cut eff.      ==============================\n";
+    cout << "---------------------------------------------------------------------------------" << endl;
 
-    cout << "# of targeted events in truth level:\t\t" << nEv << endl;
-    cout << "# after identified final states:\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
-    cout << "# after lepton eta cut (eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
-    cout << "# after lepton pt cut (pT(l)) >= " << float(lepPtCut) << "):\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
-    cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
-    cout << endl;
-    cout << "Total eff.:\t\t\t\t\t" << nJetPt << "/" << nEv << "\t(" << 100 * float(nJetPt) / float(nEv) << "%)" << endl;
+    cout << "# of targeted events in truth level:\t\t\t" << nEv << endl;
+    cout << "# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
+    cout << "# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
+    cout << "# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
+    cout << "# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
+    cout << "# after jj mass cut \t(" << jjMLowCut << " <= m(jj) <= " << float(jjMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
+    // cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
+    cout << "---------------------------------------------------------------------------------" << endl;
+    cout << "\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
+    cout << "---------------------------------------------------------------------------------" << endl;
     cout << "\n\n\n";
 
     tr.Write();
