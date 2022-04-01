@@ -6,6 +6,7 @@ using namespace std;
 #include "TLorentzVector.h"
 #include "classes/DelphesClasses.h"
 
+//{{{
 Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* lepTrue, TLorentzVector* Q1True, TLorentzVector* Q2True, TLorentzVector* NTrue) {
     GenParticle* particle;
     GenParticle* particle0;
@@ -35,6 +36,11 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
         // cout << particle->PID << endl;
 
         if (abs(particle->PID) == 9900012) {
+            GenParticle* particle_mu1 = (GenParticle*)branchParticle->At(particle->M1);
+            GenParticle* particle_mu2 = (GenParticle*)branchParticle->At(particle->M2);
+            // cout << particle_mu1->Eta << "; " << particle_mu1->PID << endl;
+            // cout << particle_mu2->Eta << "; " << particle_mu2->PID << endl;
+            // cout << endl;
             particleNM1 = (GenParticle*)branchParticle->At(particle->M1);
             particleNM2 = (GenParticle*)branchParticle->At(particle->M2);
             // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
@@ -46,7 +52,8 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
             for (Int_t i = 0; i < nParticles; i++) {
                 particle0 = (GenParticle*)branchParticle->At(i);
                 if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
-                    // cout << "Found Lepton: " << particle0->PID << endl;
+                    // cout << particle0->PID << endl;
+                    //  cout << "Found Lepton: " << particle0->PID << endl;
                     foundLep = 1;
                     iLepTrue = i;
                     break;
@@ -116,4 +123,59 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
     // cout << foundN1 << "; " << foundQ1 << "; " << foundQ2 << endl;
 
     return 0;
+}
+//}}}
+
+Int_t ClassifyiBackground(TClonesArray* branchParticle) {
+    GenParticle* particle;
+    GenParticle* particleM;
+    GenParticle* particleMM;
+
+    Int_t nParticles = branchParticle->GetEntries();
+
+    Int_t found2W = 0;
+
+    Int_t iW1;
+    Int_t iWMother;
+    for (Int_t ip1 = 0; ip1 < nParticles; ip1++) {
+        particle = (GenParticle*)branchParticle->At(ip1);
+        if (particle->M1 < 0) continue;
+        if (abs(particle->PID) == 13 || abs(particle->PID) == 11) {      // lepton
+            particleM = (GenParticle*)branchParticle->At(particle->M1);  // targeting W boson
+            if (abs(particleM->PID) != 24) continue;
+            if (particleM->M1 < 0) continue;
+
+            particleMM = (GenParticle*)branchParticle->At(particleM->M1);  // W boson's mother
+            iW1 = ip1;
+            iWMother = particleM->M1;
+        }
+    }
+
+    Int_t iW2;
+    for (Int_t ip2 = 0; ip2 < nParticles; ip2++) {
+        particle = (GenParticle*)branchParticle->At(ip2);
+        if (particle->M1 < 0) continue;
+        if (abs(particle->PID) >= 1 && abs(particle->PID) <= 6) {        // quark
+            particleM = (GenParticle*)branchParticle->At(particle->M1);  // targeting W boson
+            if (abs(particleM->PID) != 24) continue;
+            if (particle->M1 == iW1) continue;  // exclude the tagged W boson
+            if (particleM->M1 < 0) continue;
+
+            particleMM = (GenParticle*)branchParticle->At(particleM->M1);
+            if (particleM->M1 != iWMother) continue;
+            iW2 = ip2;
+
+            found2W = 1;
+        }
+    }
+
+    if (found2W == 0) return 1;
+    particle = (GenParticle*)branchParticle->At(iW1);
+    // cout << endl;
+    // cout << particle->PID << endl;
+    particle = (GenParticle*)branchParticle->At(iW2);
+    // cout << particle->PID << endl;
+    // cout << endl;
+
+    return 1;
 }
