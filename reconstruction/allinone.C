@@ -8,6 +8,7 @@ using namespace std;
 
 #include "FeatureClass.C"
 #include "FinalStatesClass.C"
+#include "Geometry.C"
 #include "Reconstructor.C"
 #include "Rtypes.h"
 #include "SignalBackgroundClassifier.C"
@@ -90,7 +91,7 @@ void allinone(
 
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
-    if (not save) outputFile = "../dummy.root";
+    if (not save) outputFile = "../data/_dummy.root";
 
     cout << "\nReading: " << inputFile << "\n\n";
     if (gSystem->AccessPathName(inputFile)) {
@@ -135,6 +136,8 @@ void allinone(
     Int_t nLepPt = 0;   // # of events after lep pt cut
     Int_t nJJPt = 0;    // # of events after jj pt cut
     Int_t nJJM = 0;     // # of events after jj mas cut
+    BkgTypes bkgTypes;
+    BkgTypes bkgTypesReco;
 
     Float_t lepEtaCut = 2.5;  // lep eta cut
     Float_t lepPtCut = 100;   // lep pt cut
@@ -146,23 +149,27 @@ void allinone(
     Float_t jjMLowCut = mW - 5 * mWWidth;   // jj mass cut
     Float_t jjMHighCut = mW + 5 * mWWidth;  // jj mass cut
 
+    // loop the events
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
         // progress
         if ((i_en % 1000) == 0) cout << "Reconstruction Progress: " << i_en << "/" << numberOfEntries << "\r";
         cout.flush();
+        // cout << "\nEvent: " << i_en << endl;
 
         treeReader->ReadEntry(i_en);  // reading the entry
 
         //========================================================================
         //=======================   Classifiy Event Type   =======================
         //========================================================================
-        iFinalStates iFSTrue;
-        TLorentzVector lepTrue, jet1True_, jet2True_, NTrue;
+        iFinalStates iFSTrue;                                 // indeces of the true level final states
+        TLorentzVector lepTrue, jet1True_, jet2True_, NTrue;  // truth level lepton, jets, and HNL
         Int_t passing = 0;
-        if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {
+        Int_t bkgPIDV1 = 99999;
+        Int_t bkgPIDV2 = 99999;
+        if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // search for signals
             passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_, &NTrue);
         } else {
-            passing = ClassifyiBackground(branchParticle);
+            passing = ClassifyiBackground(branchParticle, &bkgPIDV1, &bkgPIDV2, &bkgTypes);
         }
 
         if (passing == 0) continue;
@@ -207,30 +214,6 @@ void allinone(
             Track* lepTrack = (Track*)branchTrack->At(iFS.iLeps[iLep]);
             // eta cut
             if (not(abs(lepTrack->Eta) <= lepEtaCut)) continue;
-
-            // exclude the lepton, if it is inside the jet cone
-            // Float_t DeltaRjjl;
-            // Float_t jjlEtaDiff = jj.Eta() - lepTrack->Eta;
-            // Float_t jjlPhiDiff = jj.Phi() - lepTrack->Phi;
-            // DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
-            // if (iFS.iJets.size() == 1 && DeltaRjjl < 1.2) continue;
-            // if (iFS.iJets.size() == 2 && DeltaRjjl < 0.2) continue;
-
-            // Int_t nTracks = branchTrack->GetEntries();
-            // Float_t closestDeltaR = 99999;
-            // for (Int_t itr = 0; itr < nTracks; itr++) {
-            // if (itr == iFS.iLeps[iLep]) continue;
-            // Float_t DeltaRanyl;
-            // Track* anyTrack = (Track*)branchTrack->At(itr);
-            // Float_t anylEtaDiff = anyTrack->Eta - lepTrack->Eta;
-            // Float_t anylPhiDiff = anyTrack->Phi - lepTrack->Phi;
-            // DeltaRanyl = pow(anylEtaDiff * anylEtaDiff + anylPhiDiff * anylPhiDiff, 0.5);
-            // if (DeltaRanyl < closestDeltaR) closestDeltaR = DeltaRanyl;
-            //}
-            //// cout << closestDeltaR << endl;
-            //// cout << endl;
-            // if (closestDeltaR < 1) continue;
-
             // store the lepton with max. pT among all
             if (lepTrack->PT > ptLepMax) {
                 chargeLep = lepTrack->Charge;
@@ -262,11 +245,10 @@ void allinone(
         //========================================================================
         //=======================         Features         =======================
         //========================================================================
-
-        TLorentzVector jet1True,
-            jet2True;
+        TLorentzVector jet1True, jet2True;
         Float_t DeltaRjj, DeltaRjjl;
         if (iFS.iJets.size() == 2) {
+            // if there are two jets, match them to the reconstcuted jet according to the eta
             if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
                 jet1True = jet1True_;
                 jet2True = jet2True_;
@@ -275,7 +257,7 @@ void allinone(
                 jet2True = jet1True_;
             }
             Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
-            Float_t jjPhiDiff = jet1.Phi() - jet2.Phi();
+            Float_t jjPhiDiff = deltaPhi(jet1.Phi(), jet2.Phi());
             DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
 
         } else if (iFS.iJets.size() == 1) {
@@ -284,15 +266,15 @@ void allinone(
         }
 
         Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
-        Float_t jjlPhiDiff = jj.Phi() - lep.Phi();
+        Float_t jjlPhiDiff = deltaPhi(jj.Phi(), lep.Phi());
         DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
 
         Float_t DeltaRjjTrue, DeltaRjjlTrue;
         Float_t jjEtaDiffTrue = jet1True.Eta() - jet2True.Eta();
-        Float_t jjPhiDiffTrue = jet1True.Phi() - jet2True.Phi();
+        Float_t jjPhiDiffTrue = deltaPhi(jet1True.Phi(), jet2True.Phi());
         DeltaRjjTrue = pow(jjEtaDiffTrue * jjEtaDiffTrue + jjPhiDiffTrue * jjPhiDiffTrue, 0.5);
         Float_t jjlEtaDiffTrue = jjTrue.Eta() - lepTrue.Eta();
-        Float_t jjlPhiDiffTrue = jjTrue.Phi() - lepTrue.Phi();
+        Float_t jjlPhiDiffTrue = deltaPhi(jjTrue.Phi(), lepTrue.Phi());
         DeltaRjjlTrue = pow(jjlEtaDiffTrue * jjlEtaDiffTrue + jjlPhiDiffTrue * jjlPhiDiffTrue, 0.5);
 
         features->iEvt = i_en;
@@ -311,6 +293,7 @@ void allinone(
         features->phiJet2 = jet2.Phi();
         features->EJet2 = jet2.E();
 
+        features->DeltaPhijjl = jjlPhiDiff;
         features->DeltaRjj = DeltaRjj;
         features->DeltaRjjl = DeltaRjjl;
         if (iFS.iJets.size() == 2) features->DeltaRjj = DeltaRjj;
@@ -325,6 +308,7 @@ void allinone(
         features->ptN = N.Pt();
         features->etaN = N.Eta();
         features->phiN = N.Phi();
+        features->pzN = N.Pz();
 
         features->ptLepTrue = lepTrue.Pt();
         features->etaLepTrue = lepTrue.Eta();
@@ -351,6 +335,8 @@ void allinone(
         features->ptNTrue = NTrue.Pt();
         features->etaNTrue = NTrue.Eta();
         features->phiNTrue = NTrue.Phi();
+        features->ENTrue = NTrue.E();
+        features->pzNTrue = NTrue.Pz();
 
         features->chargeLep = chargeLep;
         if (type.at(0) != 'b') {
@@ -358,25 +344,67 @@ void allinone(
             features->chargeLepTrue = lTrue->Charge;
         }
 
+        if (lep.M() < 0.1) features->typeLep = 11;
+        if (lep.M() >= 0.1) features->typeLep = 13;
+
+        features->bkgPIDV1 = bkgPIDV1;
+        features->bkgPIDV2 = bkgPIDV2;
+        // cout << " .." << endl;
+
+        passing = ClassifyiBackground(branchParticle, &bkgPIDV1, &bkgPIDV2, &bkgTypesReco);
         tr.Fill();
     }
-    cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\r";
+    cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\n\n";
 
-    cout << "---------------------------------------------------------------------------------" << endl;
-    cout << "==============================       Cut eff.      ==============================\n";
-    cout << "---------------------------------------------------------------------------------" << endl;
+    cout << "\t---------------------------------------------------------------------------------" << endl;
+    cout << "\t==============================       Cut eff.      ==============================\n";
+    cout << "\t---------------------------------------------------------------------------------" << endl;
 
-    cout << "# of targeted events in truth level:\t\t\t" << nEv << endl;
-    cout << "# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
-    cout << "# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
-    cout << "# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
-    cout << "# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
-    cout << "# after jj mass cut \t(" << jjMLowCut << " <= m(jj) <= " << float(jjMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
+    cout << "\t# of targeted events in truth level:\t\t\t" << nEv << endl;
+    cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
+    cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
+    cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
+    cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
+    cout << "\t# after jj mass cut \t(" << jjMLowCut << " <= m(jj) <= " << float(jjMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
     // cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
-    cout << "---------------------------------------------------------------------------------" << endl;
-    cout << "\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
-    cout << "---------------------------------------------------------------------------------" << endl;
+    cout << "\t---------------------------------------------------------------------------------" << endl;
+    cout << "\t\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
+    cout << "\t---------------------------------------------------------------------------------" << endl;
     cout << "\n\n\n";
+
+    if (type.at(0) == 'b') {
+        cout << "\t---------------------------------------------------------------------------------" << endl;
+        cout << "\tBkg. Types\t\tNumber in truth level \t\tReconstructed Numebr" << endl;
+        // cout << "\t(of same 'mother')" << endl;
+        cout << "\t---------------------------------------------------------------------------------" << endl;
+        cout << "\t# of W-W:\t\t" << bkgTypes.WW << "\t(" << 100 * float(bkgTypes.WW) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.WW << "\t(" << 100 * float(bkgTypesReco.WW) / float(nJJM) << "%)" << endl;
+        cout << "\t# of photon-photon:\t" << bkgTypes.phph << "\t(" << 100 * float(bkgTypes.phph) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.phph << "\t(" << 100 * float(bkgTypesReco.phph) / float(nJJM) << "%)" << endl;
+        cout << "\t# of Z-photon:\t\t" << bkgTypes.Zph << "\t(" << 100 * float(bkgTypes.Zph) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.Zph << "\t(" << 100 * float(bkgTypesReco.Zph) / float(nJJM) << "%)" << endl;
+        cout << "\t# of Z-Z:\t\t" << bkgTypes.ZZ << "\t(" << 100 * float(bkgTypes.ZZ) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.ZZ << "\t(" << 100 * float(bkgTypesReco.ZZ) / float(nJJM) << "%)" << endl;
+        cout << "\t# of W-Z:\t\t" << bkgTypes.WZ << "\t(" << 100 * float(bkgTypes.WZ) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.WZ << "\t(" << 100 * float(bkgTypesReco.WZ) / float(nJJM) << "%)" << endl;
+        cout << "\t# of W-photon:\t\t" << bkgTypes.Wph << "\t(" << 100 * float(bkgTypes.Wph) / float(nEv) << "%)"
+             << "\t\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
+
+        cout << "\t# of lepFromPhys:\t" << bkgTypes.lepFromPhys << "\t(" << 100 * float(bkgTypes.lepFromPhys) / float(nEv) << "%)"
+             << "\t\t" << bkgTypesReco.lepFromPhys << "\t(" << 100 * float(bkgTypesReco.lepFromPhys) / float(nJJM) << "%)" << endl;
+        cout << "\t\t lep=e: \t  [" << bkgTypes.eFromPhys << "\t  (" << 100 * float(bkgTypes.eFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
+             << "\t\t  [" << bkgTypesReco.eFromPhys << "\t  (" << 100 * float(bkgTypesReco.eFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
+        cout << "\t\t lep=mu:\t  [" << bkgTypes.muFromPhys << "\t  (" << 100 * float(bkgTypes.muFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
+             << "\t\t  [" << bkgTypesReco.muFromPhys << "\t  (" << 100 * float(bkgTypesReco.muFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
+
+        cout << "\t# of others:\t\t" << bkgTypes.others << "\t(" << 100 * float(bkgTypes.others) / float(nEv) << "%)"
+             << "\t\t" << bkgTypesReco.others << "\t(" << 100 * float(bkgTypesReco.others) / float(nJJM) << "%)" << endl;
+        cout << "\t\t Have electron:\t  [" << bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
+             << "\t\t  [" << bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+        cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
+             << "\t\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+        cout << "\t---------------------------------------------------------------------------------" << endl;
+    }
 
     tr.Write();
     fea.Close();
