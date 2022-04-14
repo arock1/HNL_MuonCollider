@@ -2,30 +2,34 @@
 #include "Rtypes.h"
 class Features {
 public:
-    Int_t iEvt;
-    Float_t ptLep;
-    Float_t etaLep;
-    Float_t phiLep;
-    Float_t ELep;
-    Float_t ptJet1;
-    Float_t etaJet1;
-    Float_t phiJet1;
-    Float_t EJet1;
-    Float_t ptJet2;
-    Float_t etaJet2;
-    Float_t phiJet2;
-    Float_t EJet2;
-    Float_t DeltaRjj;
-    Float_t DeltaRjjl;
-    Int_t nJets;
-    Float_t ptJJ;
-    Float_t etaJJ;
-    Float_t phiJJ;
-    Float_t mJJ;
-    Float_t mN;
-    Float_t ptN;
-    Float_t etaN;
-    Float_t phiN;
+    Int_t iEvt;           // event index
+    Float_t ptLep;        // pt of lepton
+    Float_t etaLep;       // eta of lepton
+    Float_t phiLep;       // phi of lepton
+    Float_t ELep;         // energy of lepton
+    Int_t typeLep;        // type of lepton (11: electron, 13: muon)
+    Float_t ptJet1;       // pt of Jet1, if any
+    Float_t etaJet1;      // eta of Jet1, if any
+    Float_t phiJet1;      // phi of Jet1, if any
+    Float_t EJet1;        // E of Jet1, if any
+    Float_t ptJet2;       // pt of Jet2, if any
+    Float_t etaJet2;      // eta of Jet2, if any
+    Float_t phiJet2;      // phi of Jet2, if any
+    Float_t EJet2;        // E of Jet2, if any
+    Float_t DeltaPhijjl;  // Delta phi of lepton and JJ (from W)
+    Float_t DeltaRjj;     // Delta R between 2 Jets, if any
+    Float_t DeltaRjjl;    // Delta R between lepton and JJ (Jet(s) from W)
+    Int_t nJets;          // number of Jets
+    Float_t ptJJ;         // pt of W
+    Float_t etaJJ;        // eta of W
+    Float_t phiJJ;        // phi of W
+    Float_t mJJ;          // mass of W
+    Float_t mN;           // mass of N
+    Float_t ptN;          // pt of N
+    Float_t etaN;         // eta of N
+    Float_t phiN;         // phi of N
+    Float_t pzN;          // pz of N
+    Int_t chargeLep;      // charge of lepton
 
     Float_t ptLepTrue;
     Float_t etaLepTrue;
@@ -49,4 +53,10 @@ public:
     Float_t ptNTrue;
     Float_t etaNTrue;
     Float_t phiNTrue;
+    Float_t ENTrue;
+    Float_t pzNTrue;
+    Int_t chargeLepTrue;
+
+    Int_t bkgPIDV1 = 99999;
+    Int_t bkgPIDV2 = 99999;
 };

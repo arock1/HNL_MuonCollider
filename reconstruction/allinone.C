@@ -108,18 +108,10 @@ void allinone(
 
     // clone the branches
     TClonesArray* branchParticle = treeReader->UseBranch("Particle");
-    TClonesArray* branchTrack = treeReader->UseBranch("Track");
-    TClonesArray* branchKTJet = treeReader->UseBranch("KTjet");
+    TClonesArray* branchElectron = treeReader->UseBranch("Electron");
+    TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
-    TClonesArray* branchEFlowPhoton = treeReader->UseBranch("EFlowPhoton");
-    TClonesArray* branchEFlowNeutralHadron = treeReader->UseBranch("EFlowNeutralHadron");
-
-    GenParticle* particle;
-    Track* track;
-    Jet* jet;
-    Tower* eflowphoton;
-    Tower* eflowneutralhadron;
 
     // book feature storing tree and file
     TFile fea(outputFile, "recreate");
@@ -167,9 +159,9 @@ void allinone(
         Int_t bkgPIDV1 = 99999;
         Int_t bkgPIDV2 = 99999;
         if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // search for signals
-            passing = ClassifySingal(branchParticle, &iFSTrue, &lepTrue, &jet1True_, &jet2True_, &NTrue);
+            passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue);
         } else {
-            passing = ClassifyiBackground(branchParticle, &bkgPIDV1, &bkgPIDV2, &bkgTypes);
+            passing = ClassifyiBackground(branchParticle, &bkgTypes);
         }
 
         if (passing == 0) continue;
@@ -183,7 +175,7 @@ void allinone(
         //========================================================================
         iFinalStates iFS;
         // finding final states: lepton + 1 (or 2) jet
-        iFS = FindFinalStatesIndex(branchTrack, branchVLC1Jet, branchVLC2Jet);
+        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
 
         if (iFS.foundAll == 0) continue;
         nFS += 1;
@@ -195,31 +187,32 @@ void allinone(
         // if there are two jets, then corresponding to the first and second index
         // and the W is their sum
         if (iFS.iJets.size() == 1) {
-            Jet* jet1Jet = (Jet*)branchVLC1Jet->At(iFS.iJets[0]);
-            jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
+            jet1 = iFS.iJets[0];
             jj = jet1;
         } else if (iFS.iJets.size() == 2) {
-            Jet* jet1Jet = (Jet*)branchVLC2Jet->At(iFS.iJets[0]);
-            Jet* jet2Jet = (Jet*)branchVLC2Jet->At(iFS.iJets[1]);
-            jet1.SetPtEtaPhiM(jet1Jet->PT, jet1Jet->Eta, jet1Jet->Phi, jet1Jet->Mass);
-            jet2.SetPtEtaPhiM(jet2Jet->PT, jet2Jet->Eta, jet2Jet->Phi, jet2Jet->Mass);
+            jet1 = iFS.iJets[0];
+            jet2 = iFS.iJets[1];
             jj = jet1 + jet2;
         }
 
         // loop over all the leptons
         Float_t ptLepMax = -99999;
         Int_t chargeLep;
+        Int_t lepIndex;
+        Int_t typeLep;
         Int_t foundLep = 0;
-        for (Int_t iLep = 0; iLep < iFS.iLeps.size(); iLep++) {
-            Track* lepTrack = (Track*)branchTrack->At(iFS.iLeps[iLep]);
+        for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
+            TLorentzVector lepI = iFS.iLeps[il];
             // eta cut
-            if (not(abs(lepTrack->Eta) <= lepEtaCut)) continue;
+            if (not(abs(lepI.Eta()) <= lepEtaCut)) continue;
             // store the lepton with max. pT among all
-            if (lepTrack->PT > ptLepMax) {
-                chargeLep = lepTrack->Charge;
+            if (lepI.Pt() > ptLepMax) {
+                chargeLep = iFS.iLepCharges[il];
                 foundLep = 1;
-                ptLepMax = lepTrack->PT;
-                lep.SetPtEtaPhiM(lepTrack->PT, lepTrack->Eta, lepTrack->Phi, iFS.mLeps[iLep]);
+                ptLepMax = lepI.Pt();
+                lep = lepI;
+                if (lep.M() < 0.1) typeLep = 11;
+                if (lep.M() >= 0.1) typeLep = 13;
             }
         }
         // if no such lepton, then pass
@@ -340,18 +333,18 @@ void allinone(
 
         features->chargeLep = chargeLep;
         if (type.at(0) != 'b') {
-            GenParticle* lTrue = (GenParticle*)branchParticle->At(iFSTrue.iLeps[0]);
-            features->chargeLepTrue = lTrue->Charge;
+            features->chargeLepTrue = iFSTrue.iLepCharges[0];
         }
 
-        if (lep.M() < 0.1) features->typeLep = 11;
-        if (lep.M() >= 0.1) features->typeLep = 13;
+        // if (lep.M() < 0.1) features->typeLep = 11;
+        // if (lep.M() >= 0.1) features->typeLep = 13;
+        features->typeLep = typeLep;
 
         features->bkgPIDV1 = bkgPIDV1;
         features->bkgPIDV2 = bkgPIDV2;
         // cout << " .." << endl;
 
-        passing = ClassifyiBackground(branchParticle, &bkgPIDV1, &bkgPIDV2, &bkgTypesReco);
+        passing = ClassifyiBackground(branchParticle, &bkgTypesReco);
         tr.Fill();
     }
     cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\n\n";
@@ -389,13 +382,15 @@ void allinone(
              << "\t\t\t" << bkgTypesReco.WZ << "\t(" << 100 * float(bkgTypesReco.WZ) / float(nJJM) << "%)" << endl;
         cout << "\t# of W-photon:\t\t" << bkgTypes.Wph << "\t(" << 100 * float(bkgTypes.Wph) / float(nEv) << "%)"
              << "\t\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
+        cout << endl;
 
         cout << "\t# of lepFromPhys:\t" << bkgTypes.lepFromPhys << "\t(" << 100 * float(bkgTypes.lepFromPhys) / float(nEv) << "%)"
-             << "\t\t" << bkgTypesReco.lepFromPhys << "\t(" << 100 * float(bkgTypesReco.lepFromPhys) / float(nJJM) << "%)" << endl;
+             << "\t\t\t" << bkgTypesReco.lepFromPhys << "\t(" << 100 * float(bkgTypesReco.lepFromPhys) / float(nJJM) << "%)" << endl;
         cout << "\t\t lep=e: \t  [" << bkgTypes.eFromPhys << "\t  (" << 100 * float(bkgTypes.eFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
              << "\t\t  [" << bkgTypesReco.eFromPhys << "\t  (" << 100 * float(bkgTypesReco.eFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
         cout << "\t\t lep=mu:\t  [" << bkgTypes.muFromPhys << "\t  (" << 100 * float(bkgTypes.muFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
              << "\t\t  [" << bkgTypesReco.muFromPhys << "\t  (" << 100 * float(bkgTypesReco.muFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
+        cout << endl;
 
         cout << "\t# of others:\t\t" << bkgTypes.others << "\t(" << 100 * float(bkgTypes.others) / float(nEv) << "%)"
              << "\t\t" << bkgTypesReco.others << "\t(" << 100 * float(bkgTypesReco.others) / float(nJJM) << "%)" << endl;
@@ -404,6 +399,7 @@ void allinone(
         cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
              << "\t\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
+        cout << bkgTypes.motherMu << "; " << bkgTypesReco.motherMu << endl;
     }
 
     tr.Write();

@@ -3,11 +3,14 @@
 #include <vector>
 using namespace std;
 #include "Rtypes.h"
+#include "TLorentzVector.h"
 
 struct iFinalStates {
     Int_t foundAll = 0;
     Int_t iW;
-    vector<Int_t> iLeps;
-    vector<Float_t> mLeps;
-    vector<Int_t> iJets;
+    vector<TLorentzVector> iLeps;
+    vector<Int_t> iElectronIndeces;
+    vector<Int_t> iMuonIndeces;
+    vector<Int_t> iLepCharges;
+    vector<TLorentzVector> iJets;
 };
