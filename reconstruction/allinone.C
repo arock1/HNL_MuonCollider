@@ -43,6 +43,7 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
 
     } else if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // signals
         cout << "Processing Signal data" << endl;
+        string fermionType;
         Int_t pos = type.find("_");
         if (type.at(0) == 'i') {  // inclusive signal (e.g. "i3_01": inclusive signal with E=3TeV, mN=0.1TeV)
             inputFile_st = "../data/signal_E-";
@@ -51,10 +52,20 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         } else if (type.at(0) == 't') {  // t-channel
             inputFile_st = "../data/signal_tchannel_E-";
         }
-        inputFile_st += type.substr(1, pos - 1);
+        inputFile_st += type.substr(2, pos - 2);
         inputFile_st += "TeV_N-";
         inputFile_st += type.substr(pos + 1, -1);
-        inputFile_st += "TeV_CustomizedJet.root";
+        inputFile_st += "TeV";
+        if (type.at(1) == 'D') {
+            fermionType = "_Dirac";
+        } else if (type.at(1) == 'M') {
+            fermionType = "";
+        } else {
+            cout << "Wrong input type" << endl;
+            return 0;
+        }
+        inputFile_st += fermionType;
+        inputFile_st += "_CustomizedJet.root";
 
         if (type.at(0) == 'i') {
             outputFile_st = "../features/signal_reco_E-";
@@ -63,10 +74,12 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         } else if (type.at(0) == 't') {
             outputFile_st = "../features/signal_tchannel_reco_E-";
         }
-        outputFile_st += type.substr(1, pos - 1);
+        outputFile_st += type.substr(2, pos - 2);
         outputFile_st += "TeV_N-";
         outputFile_st += type.substr(pos + 1, -1);
-        outputFile_st += "TeV.root";
+        outputFile_st += "TeV";
+        outputFile_st += fermionType;
+        outputFile_st += ".root";
         *inputFile_st_ += inputFile_st;
         *outputFile_st_ = outputFile_st;
         return 1;
@@ -91,13 +104,15 @@ void allinone(
 
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
-    if (not save) outputFile = "../data/_dummy.root";
-
-    cout << "\nReading: " << inputFile << "\n\n";
+    cout << "\nReading: " << inputFile << "\n";
+    cout << "Expected outputFile: " << outputFile << "\n\n"
+         << endl;
     if (gSystem->AccessPathName(inputFile)) {
         cout << "inputFile: " << inputFile << " does not exist" << endl;
         return;
     }
+
+    if (not save) outputFile = "../data/_dummy.root";
 
     // Load lib, and read data
     gSystem->Load("libDelphes");
@@ -135,11 +150,11 @@ void allinone(
     Float_t lepPtCut = 100;   // lep pt cut
     Float_t jjPtCut = 100;    // jj pt cut
 
-    Float_t mW = 80.379;
-    Float_t mWWidth = 2.085;
+    // Float_t mW = 80.379;
+    // Float_t mWWidth = 2.085;
 
-    Float_t jjMLowCut = mW - 5 * mWWidth;   // jj mass cut
-    Float_t jjMHighCut = mW + 5 * mWWidth;  // jj mass cut
+    Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
+    Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
     // loop the events
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
@@ -159,7 +174,14 @@ void allinone(
         Int_t bkgPIDV1 = 99999;
         Int_t bkgPIDV2 = 99999;
         if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // search for signals
-            passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue);
+            if (type.at(1) == 'M') {
+                passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9900012);
+            } else if (type.at(1) == 'D') {
+                passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990014);
+            }
+            lepTrue = iFSTrue.iLeps[0];
+            jet1True_ = iFSTrue.iJets[0];
+            jet2True_ = iFSTrue.iJets[1];
         } else {
             passing = ClassifyiBackground(branchParticle, &bkgTypes);
         }
@@ -211,6 +233,7 @@ void allinone(
                 foundLep = 1;
                 ptLepMax = lepI.Pt();
                 lep = lepI;
+                lepIndex = il;
                 if (lep.M() < 0.1) typeLep = 11;
                 if (lep.M() >= 0.1) typeLep = 13;
             }
@@ -232,7 +255,7 @@ void allinone(
         if (not(jj.Pt() >= jjPtCut)) continue;
         nJJPt += 1;
 
-        if (not(jj.M() >= jjMLowCut && jj.M() <= jjMHighCut)) continue;
+        if (not(jj.M() >= WMLowCut && jj.M() <= WMHighCut)) continue;
         nJJM += 1;
 
         //========================================================================
@@ -344,6 +367,32 @@ void allinone(
         features->bkgPIDV2 = bkgPIDV2;
         // cout << " .." << endl;
 
+        // Preliminary: Try to find the second lepton for the 2VBF case, for LNV
+        // finding the muon that give cloeset mass to W?
+        TLorentzVector lep2;
+        Float_t mDiffWMin = 99999;
+        Int_t chargeLep2;
+        Int_t lep2Index = 99999;
+        Int_t typeLep2;
+        TLorentzVector lN;  // second lepton + N
+        for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
+            if (il == lepIndex) continue;
+            TLorentzVector lepI = iFS.iLeps[il];
+            // eta cut
+            if (not(abs(lepI.Eta()) <= lepEtaCut)) continue;
+
+            lN = lep2 + N;
+            if (abs(mWPDG - lN.M()) < mDiffWMin) {
+                chargeLep2 = iFS.iLepCharges[il];
+                mDiffWMin = abs(mWPDG - lN.M());
+                if (not(lN.M() >= WMLowCut && lN.M() <= WMHighCut)) continue;
+                cout << lN.M() << endl;
+                lep2 = lepI;
+                if (lep2.M() < 0.1) typeLep2 = 11;
+                if (lep2.M() >= 0.1) typeLep2 = 13;
+            }
+        }
+
         passing = ClassifyiBackground(branchParticle, &bkgTypesReco);
         tr.Fill();
     }
@@ -358,7 +407,7 @@ void allinone(
     cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
     cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
     cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
-    cout << "\t# after jj mass cut \t(" << jjMLowCut << " <= m(jj) <= " << float(jjMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
+    cout << "\t# after jj mass cut \t(" << WMLowCut << " <= m(jj) <= " << float(WMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
     // cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
     cout << "\t---------------------------------------------------------------------------------" << endl;
     cout << "\t\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
@@ -399,10 +448,9 @@ void allinone(
         cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
              << "\t\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
-        cout << bkgTypes.motherMu << "; " << bkgTypesReco.motherMu << endl;
     }
 
     tr.Write();
     fea.Close();
-    cout << "\nWriting: " << outputFile << "\n\n";
+    cout << "Writing to: " << outputFile << "\n\n";
 }

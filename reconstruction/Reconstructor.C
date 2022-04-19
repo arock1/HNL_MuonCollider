@@ -14,12 +14,17 @@ using namespace std;
 #include "classes/DelphesClasses.h"
 
 TParticlePDG* electronPDG = TDatabasePDG::Instance()->GetParticle(11);
-extern Float_t mElectron;
-Float_t mElectron = electronPDG->Mass();
+extern Float_t mElectronPDG;
+Float_t mElectronPDG = electronPDG->Mass();
 
 TParticlePDG* muonPDG = TDatabasePDG::Instance()->GetParticle(13);
-extern Float_t mMuon;
-Float_t mMuon = muonPDG->Mass();
+extern Float_t mMuonPDG;
+Float_t mMuonPDG = muonPDG->Mass();
+
+TParticlePDG* WPDG = TDatabasePDG::Instance()->GetParticle(24);
+extern Float_t mWPDG, widthWPDG;
+Float_t mWPDG = WPDG->Mass();
+Float_t widthWPDG = WPDG->Width();
 
 iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
     iFinalStates iFinalStatesIndexes;
@@ -37,7 +42,7 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     Electron* electron1;
     for (Int_t iel = 0; iel < nElectrons; iel++) {
         electron1 = (Electron*)branchElectron->At(iel);
-        lep.SetPtEtaPhiM(electron1->PT, electron1->Eta, electron1->Phi, mElectron);
+        lep.SetPtEtaPhiM(electron1->PT, electron1->Eta, electron1->Phi, mElectronPDG);
         iFinalStatesIndexes.iLeps.push_back(lep);
         iFinalStatesIndexes.iElectronIndeces.push_back(iel);
         iFinalStatesIndexes.iLepCharges.push_back(electron1->Charge);
@@ -45,11 +50,7 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     Muon* muon1;
     for (Int_t imu = 0; imu < nMuons; imu++) {
         muon1 = (Muon*)branchMuon->At(imu);
-        lep.SetPtEtaPhiM(muon1->PT, muon1->Eta, muon1->Phi, mMuon);
-
-        GenParticle* lepMother = (GenParticle*)muon1->Particle.GetObject();
-        // cout << lepMother->PID << ".................................." << endl;
-
+        lep.SetPtEtaPhiM(muon1->PT, muon1->Eta, muon1->Phi, mMuonPDG);
         iFinalStatesIndexes.iLeps.push_back(lep);
         iFinalStatesIndexes.iMuonIndeces.push_back(imu);
         iFinalStatesIndexes.iLepCharges.push_back(muon1->Charge);

@@ -6,8 +6,7 @@ using namespace std;
 #include "TLorentzVector.h"
 #include "classes/DelphesClasses.h"
 
-//{{{
-Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* NTrue) {
+Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLorentzVector* NTrue, Int_t NPID) {
     GenParticle* particle;
     GenParticle* particle0;
     GenParticle* particle0M;
@@ -38,7 +37,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
         particle = (GenParticle*)branchParticle->At(iN);
         // cout << particle->PID << endl;
 
-        if (abs(particle->PID) == 9900012) {                               // find HNL
+        if (abs(particle->PID) == NPID) {                                  // find HNL
             particleNM1 = (GenParticle*)branchParticle->At(particle->M1);  // mother of HNL
             particleNM2 = (GenParticle*)branchParticle->At(particle->M2);  // mother of HNL
             // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
@@ -70,7 +69,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
 
                 if (abs(particle0->PID) <= 8) {  // if it is quark
                     while (true) {               // loop to trace its history
-                        if (abs(particle0M->PID) == 9900012) {
+                        if (abs(particle0M->PID) == NPID) {
                             if (abs(particle0->PID) % 2 == 1) {  // odd: down type quark
                                 // cout << "down: " << particle0->PID << endl;
                                 iQ1True = ii;
@@ -85,7 +84,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                         if (foundQ1 == 1 && foundQ2 == 1) break;
 
                         particle0M = (GenParticle*)branchParticle->At(iM);
-                        if (abs(particle0M->PID) != 24 && abs(particle0M->PID) != 9900012) break;
+                        if (abs(particle0M->PID) != 24 && abs(particle0M->PID) != NPID) break;
                         iM = particle0M->M1;
                     }
                 }
