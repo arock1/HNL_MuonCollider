@@ -1,4 +1,8 @@
 
+// ==========================================================================
+// || This Code
+// ==========================================================================
+
 #include <cmath>
 #include <iostream>
 #include <random>
@@ -45,7 +49,7 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         cout << "Processing Signal data" << endl;
         string fermionType;
         Int_t pos = type.find("_");
-        if (type.at(0) == 'i') {  // inclusive signal (e.g. "i3_01": inclusive signal with E=3TeV, mN=0.1TeV)
+        if (type.at(0) == 'i') {  // inclusive signal (e.g. "iM3_01": inclusive signal with Majorana, E=3TeV, mN=0.1TeV)
             inputFile_st = "../data/signal_E-";
         } else if (type.at(0) == 's') {  // s-channel
             inputFile_st = "../data/signal_schannel_E-";
@@ -105,8 +109,7 @@ void allinone(
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
     cout << "\nReading: " << inputFile << "\n";
-    cout << "Expected outputFile: " << outputFile << "\n\n"
-         << endl;
+    cout << "Expected outputFile: " << outputFile << "\n\n";
     if (gSystem->AccessPathName(inputFile)) {
         cout << "inputFile: " << inputFile << " does not exist" << endl;
         return;
@@ -127,6 +130,7 @@ void allinone(
     TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
+    TClonesArray* branchMET = treeReader->UseBranch("MissingET");
 
     // book feature storing tree and file
     TFile fea(outputFile, "recreate");
@@ -150,9 +154,6 @@ void allinone(
     Float_t lepPtCut = 100;   // lep pt cut
     Float_t jjPtCut = 100;    // jj pt cut
 
-    // Float_t mW = 80.379;
-    // Float_t mWWidth = 2.085;
-
     Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
     Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
@@ -170,18 +171,21 @@ void allinone(
         //========================================================================
         iFinalStates iFSTrue;                                 // indeces of the true level final states
         TLorentzVector lepTrue, jet1True_, jet2True_, NTrue;  // truth level lepton, jets, and HNL
+        Int_t typeLepTrue;
         Int_t passing = 0;
-        Int_t bkgPIDV1 = 99999;
-        Int_t bkgPIDV2 = 99999;
         if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // search for signals
-            if (type.at(1) == 'M') {
+            if (type.at(1) == 'M') {                                        // Majorana
                 passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9900012);
             } else if (type.at(1) == 'D') {
-                passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990014);
+                passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990012);
             }
             lepTrue = iFSTrue.iLeps[0];
             jet1True_ = iFSTrue.iJets[0];
             jet2True_ = iFSTrue.iJets[1];
+            // cout << lepTrue.M() << endl;
+            // cout << iFSTrue.iElectronIndeces.size() << "; " << iFSTrue.iMuonIndeces.size() << endl;
+            if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
+            if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
         } else {
             passing = ClassifyiBackground(branchParticle, &bkgTypes);
         }
@@ -234,8 +238,8 @@ void allinone(
                 ptLepMax = lepI.Pt();
                 lep = lepI;
                 lepIndex = il;
-                if (lep.M() < 0.1) typeLep = 11;
-                if (lep.M() >= 0.1) typeLep = 13;
+                if (il < iFS.iElectronIndeces.size()) typeLep = 11;
+                if (il >= iFS.iElectronIndeces.size()) typeLep = 13;
             }
         }
         // if no such lepton, then pass
@@ -359,13 +363,8 @@ void allinone(
             features->chargeLepTrue = iFSTrue.iLepCharges[0];
         }
 
-        // if (lep.M() < 0.1) features->typeLep = 11;
-        // if (lep.M() >= 0.1) features->typeLep = 13;
         features->typeLep = typeLep;
-
-        features->bkgPIDV1 = bkgPIDV1;
-        features->bkgPIDV2 = bkgPIDV2;
-        // cout << " .." << endl;
+        features->typeLepTrue = typeLepTrue;
 
         // Preliminary: Try to find the second lepton for the 2VBF case, for LNV
         // finding the muon that give cloeset mass to W?
@@ -386,15 +385,25 @@ void allinone(
                 chargeLep2 = iFS.iLepCharges[il];
                 mDiffWMin = abs(mWPDG - lN.M());
                 if (not(lN.M() >= WMLowCut && lN.M() <= WMHighCut)) continue;
-                cout << lN.M() << endl;
                 lep2 = lepI;
-                if (lep2.M() < 0.1) typeLep2 = 11;
-                if (lep2.M() >= 0.1) typeLep2 = 13;
             }
+        }
+        features->typeLep2 = typeLep2;
+
+        Int_t nMET = branchMET->GetEntries();
+        if (nMET != 0) {
+            MissingET* met = (MissingET*)branchMET->At(0);
+            features->MET = met->MET;
         }
 
         passing = ClassifyiBackground(branchParticle, &bkgTypesReco);
         tr.Fill();
+
+        // cout << "M: " << lepTrue.M() << "; " << lep.M() << endl;
+        // cout << "E: " << lepTrue.E() << "; " << lep.E() << endl;
+        // cout << "P: " << lepTrue.P() << "; " << lep.P() << endl;
+        // cout << "PT: " << lepTrue.Pt() << "; " << lep.Pt() << endl;
+        // cout << endl;
     }
     cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\n\n";
 
@@ -420,7 +429,7 @@ void allinone(
         // cout << "\t(of same 'mother')" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
         cout << "\t# of W-W:\t\t" << bkgTypes.WW << "\t(" << 100 * float(bkgTypes.WW) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.WW << "\t(" << 100 * float(bkgTypesReco.WW) / float(nJJM) << "%)" << endl;
+             << "\t\t" << bkgTypesReco.WW << "\t(" << 100 * float(bkgTypesReco.WW) / float(nJJM) << "%)" << endl;
         cout << "\t# of photon-photon:\t" << bkgTypes.phph << "\t(" << 100 * float(bkgTypes.phph) / float(nEv) << "%)"
              << "\t\t\t" << bkgTypesReco.phph << "\t(" << 100 * float(bkgTypesReco.phph) / float(nJJM) << "%)" << endl;
         cout << "\t# of Z-photon:\t\t" << bkgTypes.Zph << "\t(" << 100 * float(bkgTypes.Zph) / float(nEv) << "%)"
@@ -430,7 +439,7 @@ void allinone(
         cout << "\t# of W-Z:\t\t" << bkgTypes.WZ << "\t(" << 100 * float(bkgTypes.WZ) / float(nEv) << "%)"
              << "\t\t\t" << bkgTypesReco.WZ << "\t(" << 100 * float(bkgTypesReco.WZ) / float(nJJM) << "%)" << endl;
         cout << "\t# of W-photon:\t\t" << bkgTypes.Wph << "\t(" << 100 * float(bkgTypes.Wph) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
+             << "\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
         cout << endl;
 
         cout << "\t# of lepFromPhys:\t" << bkgTypes.lepFromPhys << "\t(" << 100 * float(bkgTypes.lepFromPhys) / float(nEv) << "%)"
@@ -446,7 +455,7 @@ void allinone(
         cout << "\t\t Have electron:\t  [" << bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
              << "\t\t  [" << bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
         cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
-             << "\t\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+             << "\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
     }
 

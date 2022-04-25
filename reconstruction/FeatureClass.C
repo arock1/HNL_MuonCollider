@@ -8,6 +8,7 @@ public:
     Float_t phiLep;       // phi of lepton
     Float_t ELep;         // energy of lepton
     Int_t typeLep;        // type of lepton (11: electron, 13: muon)
+    Int_t typeLep2;       // type of lepton (11: electron, 13: muon)
     Float_t ptJet1;       // pt of Jet1, if any
     Float_t etaJet1;      // eta of Jet1, if any
     Float_t phiJet1;      // phi of Jet1, if any
@@ -30,6 +31,7 @@ public:
     Float_t phiN;         // phi of N
     Float_t pzN;          // pz of N
     Int_t chargeLep;      // charge of lepton
+    Float_t MET;
 
     Float_t ptLepTrue;
     Float_t etaLepTrue;
@@ -56,6 +58,7 @@ public:
     Float_t ENTrue;
     Float_t pzNTrue;
     Int_t chargeLepTrue;
+    Int_t typeLepTrue;
 
     Int_t bkgPIDV1 = 99999;
     Int_t bkgPIDV2 = 99999;

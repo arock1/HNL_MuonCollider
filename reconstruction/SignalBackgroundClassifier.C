@@ -37,14 +37,11 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
         particle = (GenParticle*)branchParticle->At(iN);
         // cout << particle->PID << endl;
 
-        if (abs(particle->PID) == NPID) {                                  // find HNL
-            particleNM1 = (GenParticle*)branchParticle->At(particle->M1);  // mother of HNL
-            particleNM2 = (GenParticle*)branchParticle->At(particle->M2);  // mother of HNL
-            // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
-            // cout << particleNM1->Charge << "; " << particleNM1->Eta << endl;
-            // cout << endl;
+        if (abs(particle->PID) == NPID) {  // find HNL
 
+            // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
             // cout << "found N1" << endl;
+
             foundN = 1;
             iNTrue = iN;
 
@@ -52,7 +49,8 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 particle0 = (GenParticle*)branchParticle->At(i);
                 if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
                     // cout << particle0->PID << endl;
-                    //  cout << "Found Lepton: " << particle0->PID << endl;
+                    // cout << "Found Lepton: " << particle0->PID << endl;
+
                     foundLep = 1;
                     iLepTrue = i;
                     typeLep = abs(particle0->PID);
@@ -91,7 +89,6 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 if (foundQ1 == 1 && foundQ2 == 1) break;
             }
             if (foundN == 1 && foundQ1 == 1 && foundQ2 == 1) {
-                // cout << "............" << endl;
                 iFinalStates iFSTrue_;
 
                 GenParticle* lepParticle = (GenParticle*)branchParticle->At(iLepTrue);
@@ -100,27 +97,26 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 GenParticle* NParticle = (GenParticle*)branchParticle->At(iNTrue);
 
                 TLorentzVector lepTrue_, Q1True_, Q2True_, NTrue_;
-                lepTrue_.SetPtEtaPhiE(lepParticle->PT, lepParticle->Eta, lepParticle->Phi, lepParticle->E);
-                Q1True_.SetPtEtaPhiE(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, Q1Particle->E);
-                Q2True_.SetPtEtaPhiE(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, Q2Particle->E);
+                lepTrue_.SetPtEtaPhiM(lepParticle->PT, lepParticle->Eta, lepParticle->Phi, 0);
+                Q1True_.SetPtEtaPhiM(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, 0);
+                Q2True_.SetPtEtaPhiM(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, 0);
                 NTrue_.SetPtEtaPhiE(NParticle->PT, NParticle->Eta, NParticle->Phi, NParticle->E);
 
                 iFSTrue_.iLeps.push_back(lepTrue_);
                 iFSTrue_.iJets.push_back(Q1True_);
                 iFSTrue_.iJets.push_back(Q2True_);
                 iFSTrue_.iLepCharges.push_back(lepCharge);
+                if (typeLep == 11) iFSTrue_.iElectronIndeces.push_back(iLepTrue);
+                if (typeLep == 13) iFSTrue_.iMuonIndeces.push_back(iLepTrue);
                 *iFSTrue = iFSTrue_;
-
                 *NTrue = NTrue_;
 
                 return 1;
             }
         }
     }
-    // cout << foundN1 << "; " << foundQ1 << "; " << foundQ2 << endl;
     return 0;
 }
-//}}}
 
 struct BkgTypes {
     Int_t WW = 0;

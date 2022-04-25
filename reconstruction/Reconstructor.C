@@ -42,7 +42,7 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     Electron* electron1;
     for (Int_t iel = 0; iel < nElectrons; iel++) {
         electron1 = (Electron*)branchElectron->At(iel);
-        lep.SetPtEtaPhiM(electron1->PT, electron1->Eta, electron1->Phi, mElectronPDG);
+        lep.SetPtEtaPhiM(electron1->PT, electron1->Eta, electron1->Phi, 0);  // assumed lepton to be massless
         iFinalStatesIndexes.iLeps.push_back(lep);
         iFinalStatesIndexes.iElectronIndeces.push_back(iel);
         iFinalStatesIndexes.iLepCharges.push_back(electron1->Charge);
@@ -50,7 +50,7 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     Muon* muon1;
     for (Int_t imu = 0; imu < nMuons; imu++) {
         muon1 = (Muon*)branchMuon->At(imu);
-        lep.SetPtEtaPhiM(muon1->PT, muon1->Eta, muon1->Phi, mMuonPDG);
+        lep.SetPtEtaPhiM(muon1->PT, muon1->Eta, muon1->Phi, 0);  // assumed lepton to be massless
         iFinalStatesIndexes.iLeps.push_back(lep);
         iFinalStatesIndexes.iMuonIndeces.push_back(imu);
         iFinalStatesIndexes.iLepCharges.push_back(muon1->Charge);
@@ -59,7 +59,6 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     TLorentzVector jet;
     Jet* jet1;
     Jet* jet2;
-    // required 2 jets event
     if (nVLC1Jets == 1) {
         jet1 = (Jet*)branchVLC1Jet->At(0);
         jet.SetPtEtaPhiM(jet1->PT, jet1->Eta, jet1->Phi, jet1->Mass);
