@@ -1,6 +1,7 @@
 
 // ==========================================================================
-// || This Code
+// || This Code Does:
+// || ......
 // ==========================================================================
 
 #include <cmath>
@@ -141,14 +142,14 @@ void allinone(
     if (num_test == 0) num_test = numberOfEntries;
 
     // tracing the number of events are each cut
-    Int_t nEv = 0;      // # of events in truth level
-    Int_t nFS = 0;      // # of events having identified final states
-    Int_t nLepEta = 0;  // # of events after lep eta cut
-    Int_t nLepPt = 0;   // # of events after lep pt cut
-    Int_t nJJPt = 0;    // # of events after jj pt cut
-    Int_t nJJM = 0;     // # of events after jj mas cut
-    BkgTypes bkgTypes;
-    BkgTypes bkgTypesReco;
+    Int_t nEv = 0;          // # of events in truth level
+    Int_t nFS = 0;          // # of events having identified final states
+    Int_t nLepEta = 0;      // # of events after lep eta cut
+    Int_t nLepPt = 0;       // # of events after lep pt cut
+    Int_t nJJPt = 0;        // # of events after jj pt cut
+    Int_t nJJM = 0;         // # of events after jj mas cut
+    BkgTypes bkgTypes;      // Count the type of bkg
+    BkgTypes bkgTypesReco;  // count the type of bkg after reconstruction
 
     Float_t lepEtaCut = 2.5;  // lep eta cut
     Float_t lepPtCut = 100;   // lep pt cut
@@ -176,14 +177,12 @@ void allinone(
         if (type.at(0) == 'i' || type.at(0) == 's' || type.at(0) == 't') {  // search for signals
             if (type.at(1) == 'M') {                                        // Majorana
                 passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9900012);
-            } else if (type.at(1) == 'D') {
+            } else if (type.at(1) == 'D') {  // Dirac
                 passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990012);
             }
             lepTrue = iFSTrue.iLeps[0];
             jet1True_ = iFSTrue.iJets[0];
             jet2True_ = iFSTrue.iJets[1];
-            // cout << lepTrue.M() << endl;
-            // cout << iFSTrue.iElectronIndeces.size() << "; " << iFSTrue.iMuonIndeces.size() << endl;
             if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
             if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
         } else {
