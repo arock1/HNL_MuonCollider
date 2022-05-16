@@ -181,8 +181,8 @@ void allinone(
                 passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990012);
             }
             lepTrue = iFSTrue.iLeps[0];
-            jet1True_ = iFSTrue.iJets[0];
-            jet2True_ = iFSTrue.iJets[1];
+            jet1True_ = iFSTrue.i2Jets[0];
+            jet2True_ = iFSTrue.i2Jets[1];
             if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
             if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
         } else {
@@ -205,19 +205,27 @@ void allinone(
         if (iFS.foundAll == 0) continue;
         nFS += 1;
 
-        TLorentzVector lep, jet1, jet2, jj, N;
+        TLorentzVector jet1, jet21, jet22, jet2;
+        TLorentzVector lep, jj, N;
 
-        // if there is only one jet, then it is corresponding to the first index
-        // and the W is this only jet
-        // if there are two jets, then corresponding to the first and second index
-        // and the W is their sum
-        if (iFS.iJets.size() == 1) {
-            jet1 = iFS.iJets[0];
-            jj = jet1;
-        } else if (iFS.iJets.size() == 2) {
-            jet1 = iFS.iJets[0];
-            jet2 = iFS.iJets[1];
-            jj = jet1 + jet2;
+        // if there are both one jet and two jets, then pick the one with mass closest to W boson
+        // if there is only one(two) jet, then assign that as an W jet
+        if (iFS.i1Jets.size() == 1 && iFS.i2Jets.size() == 2) {
+            jet1 = iFS.i1Jets[0];
+            jet21 = iFS.i2Jets[0];
+            jet22 = iFS.i2Jets[1];
+            jet2 = jet21 + jet22;
+            if (abs(jet1.M() - mWPDG) < abs(jet2.M() - mWPDG)) {
+                jj = jet1;
+            } else {
+                jj = jet2;
+            }
+        } else if (iFS.i1Jets.size() == 1 && iFS.i2Jets.size() == 0) {
+            jj = iFS.i1Jets[0];
+        } else if (iFS.i1Jets.size() == 0 && iFS.i2Jets.size() == 2) {
+            jet21 = iFS.i2Jets[0];
+            jet22 = iFS.i2Jets[1];
+            jj = jet21 + jet22;
         }
 
         // loop over all the leptons
@@ -264,9 +272,9 @@ void allinone(
         //========================================================================
         //=======================         Features         =======================
         //========================================================================
+        // Tagging truth level
         TLorentzVector jet1True, jet2True;
-        Float_t DeltaRjj, DeltaRjjl;
-        if (iFS.iJets.size() == 2) {
+        if (iFS.i2Jets.size() == 2) {
             // if there are two jets, match them to the reconstcuted jet according to the eta
             if (abs(jet1.Eta() - jet1True_.Eta()) < abs(jet1.Eta() - jet2True_.Eta())) {
                 jet1True = jet1True_;
@@ -275,13 +283,17 @@ void allinone(
                 jet1True = jet2True_;
                 jet2True = jet1True_;
             }
+
+        } else if (iFS.i1Jets.size() == 1) {
+            jet1True = jet1True_;
+            jet2True = jet2True_;
+        }
+
+        Float_t DeltaRjj, DeltaRjjl;
+        if (iFS.i2Jets.size() == 2) {
             Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
             Float_t jjPhiDiff = deltaPhi(jet1.Phi(), jet2.Phi());
             DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
-
-        } else if (iFS.iJets.size() == 1) {
-            jet1True = jet1True_;
-            jet2True = jet2True_;
         }
 
         Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
@@ -302,23 +314,17 @@ void allinone(
         features->phiLep = lep.Phi();
         features->ELep = lep.E();
 
-        features->ptJet1 = jet1.Pt();
-        features->etaJet1 = jet1.Eta();
-        features->phiJet1 = jet1.Phi();
-        features->EJet1 = jet1.E();
-
-        features->ptJet2 = jet2.Pt();
-        features->etaJet2 = jet2.Eta();
-        features->phiJet2 = jet2.Phi();
-        features->EJet2 = jet2.E();
-
         features->DeltaPhijjl = jjlPhiDiff;
         features->DeltaRjj = DeltaRjj;
         features->DeltaRjjl = DeltaRjjl;
-        if (iFS.iJets.size() == 2) features->DeltaRjj = DeltaRjj;
-        if (iFS.iJets.size() == 2) features->DeltaRjjl = DeltaRjjl;
+        if (iFS.i2Jets.size() == 2) features->DeltaRjj = DeltaRjj;
+        if (iFS.i2Jets.size() == 2) features->DeltaRjjl = DeltaRjjl;
 
-        features->nJets = iFS.iJets.size();
+        if (iFS.i2Jets.size() == 2) {
+            features->pTheta = abs(jet21.E() - jet22.E()) / jj.P();
+        }
+
+        // features->nJets = iFS.iJets.size();
         features->mJJ = jj.M();
         features->ptJJ = jj.Pt();
         features->etaJJ = jj.Eta();
@@ -393,7 +399,15 @@ void allinone(
         if (nMET != 0) {
             MissingET* met = (MissingET*)branchMET->At(0);
             features->MET = met->MET;
+            features->DeltaPhiNMET = deltaPhi(met->Phi, N.Phi());
         }
+
+        Float_t minptlep = 99999;
+        for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
+            TLorentzVector lepI = iFS.iLeps[il];
+            if (lepI.Pt() < minptlep) minptlep = lepI.Pt();
+        }
+        features->MinPtLep = minptlep;
 
         passing = ClassifyiBackground(branchParticle, &bkgTypesReco);
         tr.Fill();

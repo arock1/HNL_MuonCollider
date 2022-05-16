@@ -32,6 +32,10 @@ public:
     Float_t pzN;          // pz of N
     Int_t chargeLep;      // charge of lepton
     Float_t MET;
+    Float_t pTheta;  // proxy of W polarisation from 2008.04318
+
+    Float_t MinPtLep;
+    Float_t DeltaPhiNMET;
 
     Float_t ptLepTrue;
     Float_t etaLepTrue;
