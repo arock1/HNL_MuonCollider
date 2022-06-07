@@ -3,29 +3,31 @@
 echo -e "Run E=$1, m=$2 reconstrcuctions.\n"
 
 
-
-
-
 echo " ========================================================================="
 echo -e " ||\t\t\t\t ebeam: $1 TeV \t\t\t\t||"
 echo " ========================================================================="
 echo -e " ||\t\t\t\t mN: $2 TeV \t\t\t\t||"
 echo -e " =========================================================================\n"
 
-declare -a types=("i" "s" "t")
-for t in "${types[@]}"
+declare -a types=("t" "s")
+declare -a fermtpyes=("M" "D")
+
+for f in "${fermtpyes[@]}"
 do 
-    FILE="allinone.C(\"${t}${1}_${2}\", true, 0)"
-    echo -e "\n\n\n\t----------------------------------------------"
-    echo -e "\t----- Runing $FILE -----"
-    echo -e "\t----------------------------------------------"
-    root -l << EOC 
-    .x $FILE 
-    .q 
+    for t in "${types[@]}"
+    do 
+        FILE="allinone.C(\"${t}${f}${1}_${2}\", true, 0, 0)"
+        echo -e "\n\n\n\t----------------------------------------------"
+        echo -e "\t----- Runing $FILE -----"
+        echo -e "\t----------------------------------------------"
+        root -l << EOC 
+        .x $FILE 
+        .q 
 EOC
+    done
 done 
     
-FILE="allinone.C(\"b${1}\", true, 0)"
+FILE="allinone.C(\"b${1}\", true, 0, 0)"
 echo -e "\t----------------------------------------------"
 echo -e "\t----- Runing $FILE -----"
 echo -e "\t----------------------------------------------\n\n\n"

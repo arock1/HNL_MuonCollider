@@ -1,8 +1,24 @@
-
-// ==========================================================================
-// || This Code Does:
-// || ......
-// ==========================================================================
+//
+// ===========================================================================
+// || This Code Does:                                                       ||
+// || 1. Classifiy the event type (Signal / What Background type)           ||
+// ||    and store the corresponding truth level info.                      ||
+// || 2. Find the targeted final state in detector level:                   ||
+// ||       a. At least one lepton (electron or muon)                       ||
+// ||       b. Either one 1VLC jet or two 2VLC jets found                   ||
+// || 3. Reconstruct W jet                                                  ||
+// ||       a. If there is only (1VLC case found), use it as W jet          ||
+// ||       b. If there is only (2VLC case found), use their sum as W jet   ||
+// || 4. Select lepton (Need to have |eta|<threshold to simulate detector)  ||
+// ||       a. If there is only one, use it                                 ||
+// ||       b. If there are multiple, use the one with highest pT           ||
+// || 5. Apply cuts                                                         ||
+// ||       a. lepton pT                                                    ||
+// ||       b. W jet pT                                                     ||
+// ||       c. W jet mass                                                   ||
+// || 6. Store features for later BDT analysis                              ||
+// ===========================================================================
+//
 
 #include <cmath>
 #include <iostream>
@@ -99,7 +115,8 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
 void allinone(
     const string type,
     const Bool_t save = false,
-    Int_t num_test = 0) {
+    Int_t num_test = 0,
+    Int_t print_detail = 1) {
     // formmating the input output files
     string inputFile_st;
     string outputFile_st;
@@ -313,6 +330,9 @@ void allinone(
         features->etaLep = lep.Eta();
         features->phiLep = lep.Phi();
         features->ELep = lep.E();
+        features->pxLep = lep.Px();
+        features->pyLep = lep.Py();
+        features->pzLep = lep.Pz();
 
         features->DeltaPhijjl = jjlPhiDiff;
         features->DeltaRjj = DeltaRjj;
@@ -324,6 +344,11 @@ void allinone(
             features->pTheta = abs(jet21.E() - jet22.E()) / jj.P();
         }
 
+        // if (iFS.i2Jets.size() != 2) cout << " .....................: ";
+        if (iFS.i2Jets.size() == 2) {
+            features->EJet1 = jet21.E();
+            features->EJet2 = jet22.E();
+        }
         // features->nJets = iFS.iJets.size();
         features->mJJ = jj.M();
         features->ptJJ = jj.Pt();
@@ -333,6 +358,8 @@ void allinone(
         features->ptN = N.Pt();
         features->etaN = N.Eta();
         features->phiN = N.Phi();
+        features->pxN = N.Px();
+        features->pyN = N.Py();
         features->pzN = N.Pz();
 
         features->ptLepTrue = lepTrue.Pt();
@@ -418,61 +445,70 @@ void allinone(
         // cout << "PT: " << lepTrue.Pt() << "; " << lep.Pt() << endl;
         // cout << endl;
     }
+
     cout << "Reconstruction Progress: " << numberOfEntries << "/" << numberOfEntries << "\n\n";
 
-    cout << "\t---------------------------------------------------------------------------------" << endl;
-    cout << "\t==============================       Cut eff.      ==============================\n";
-    cout << "\t---------------------------------------------------------------------------------" << endl;
-
-    cout << "\t# of targeted events in truth level:\t\t\t" << nEv << endl;
-    cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
-    cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
-    cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
-    cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
-    cout << "\t# after jj mass cut \t(" << WMLowCut << " <= m(jj) <= " << float(WMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
-    // cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
-    cout << "\t---------------------------------------------------------------------------------" << endl;
-    cout << "\t\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
-    cout << "\t---------------------------------------------------------------------------------" << endl;
-    cout << "\n\n\n";
-
-    if (type.at(0) == 'b') {
+    if (print_detail) {
         cout << "\t---------------------------------------------------------------------------------" << endl;
-        cout << "\tBkg. Types\t\tNumber in truth level \t\tReconstructed Numebr" << endl;
-        // cout << "\t(of same 'mother')" << endl;
+        cout << "\t==============================       Cut eff.      ==============================\n";
         cout << "\t---------------------------------------------------------------------------------" << endl;
-        cout << "\t# of W-W:\t\t" << bkgTypes.WW << "\t(" << 100 * float(bkgTypes.WW) / float(nEv) << "%)"
-             << "\t\t" << bkgTypesReco.WW << "\t(" << 100 * float(bkgTypesReco.WW) / float(nJJM) << "%)" << endl;
-        cout << "\t# of photon-photon:\t" << bkgTypes.phph << "\t(" << 100 * float(bkgTypes.phph) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.phph << "\t(" << 100 * float(bkgTypesReco.phph) / float(nJJM) << "%)" << endl;
-        cout << "\t# of Z-photon:\t\t" << bkgTypes.Zph << "\t(" << 100 * float(bkgTypes.Zph) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.Zph << "\t(" << 100 * float(bkgTypesReco.Zph) / float(nJJM) << "%)" << endl;
-        cout << "\t# of Z-Z:\t\t" << bkgTypes.ZZ << "\t(" << 100 * float(bkgTypes.ZZ) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.ZZ << "\t(" << 100 * float(bkgTypesReco.ZZ) / float(nJJM) << "%)" << endl;
-        cout << "\t# of W-Z:\t\t" << bkgTypes.WZ << "\t(" << 100 * float(bkgTypes.WZ) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.WZ << "\t(" << 100 * float(bkgTypesReco.WZ) / float(nJJM) << "%)" << endl;
-        cout << "\t# of W-photon:\t\t" << bkgTypes.Wph << "\t(" << 100 * float(bkgTypes.Wph) / float(nEv) << "%)"
-             << "\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
-        cout << endl;
 
-        cout << "\t# of lepFromPhys:\t" << bkgTypes.lepFromPhys << "\t(" << 100 * float(bkgTypes.lepFromPhys) / float(nEv) << "%)"
-             << "\t\t\t" << bkgTypesReco.lepFromPhys << "\t(" << 100 * float(bkgTypesReco.lepFromPhys) / float(nJJM) << "%)" << endl;
-        cout << "\t\t lep=e: \t  [" << bkgTypes.eFromPhys << "\t  (" << 100 * float(bkgTypes.eFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
-             << "\t\t  [" << bkgTypesReco.eFromPhys << "\t  (" << 100 * float(bkgTypesReco.eFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
-        cout << "\t\t lep=mu:\t  [" << bkgTypes.muFromPhys << "\t  (" << 100 * float(bkgTypes.muFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
-             << "\t\t  [" << bkgTypesReco.muFromPhys << "\t  (" << 100 * float(bkgTypesReco.muFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
-        cout << endl;
-
-        cout << "\t# of others:\t\t" << bkgTypes.others << "\t(" << 100 * float(bkgTypes.others) / float(nEv) << "%)"
-             << "\t\t" << bkgTypesReco.others << "\t(" << 100 * float(bkgTypesReco.others) / float(nJJM) << "%)" << endl;
-        cout << "\t\t Have electron:\t  [" << bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
-             << "\t\t  [" << bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
-        cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
-             << "\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+        cout << "\t# of targeted events in truth level:\t\t\t" << nEv << endl;
+        cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
+        cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
+        cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
+        cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
+        cout << "\t# after jj mass cut \t(" << WMLowCut << " <= m(jj) <= " << float(WMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
+        // cout << "# after jet pt cut (pT(j1, j2) >= " << float(jetPtCut) << "):\t\t" << nJetPt << "\t(" << 100 * float(nJetPt) / float(nLepPt) << "%)" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
+        cout << "\t\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;
+        cout << "\t---------------------------------------------------------------------------------" << endl;
+        cout << "\n\n\n";
+
+        if (type.at(0) == 'b') {
+            cout << "\t---------------------------------------------------------------------------------" << endl;
+            cout << "\tBkg. Types\t\tNumber in truth level \t\tReconstructed Numebr" << endl;
+            // cout << "\t(of same 'mother')" << endl;
+            cout << "\t---------------------------------------------------------------------------------" << endl;
+            cout << "\t# of W-W:\t\t" << bkgTypes.WW << "\t(" << 100 * float(bkgTypes.WW) / float(nEv) << "%)"
+                 << "\t\t" << bkgTypesReco.WW << "\t(" << 100 * float(bkgTypesReco.WW) / float(nJJM) << "%)" << endl;
+            cout << "\t# of photon-photon:\t" << bkgTypes.phph << "\t(" << 100 * float(bkgTypes.phph) / float(nEv) << "%)"
+                 << "\t\t\t" << bkgTypesReco.phph << "\t(" << 100 * float(bkgTypesReco.phph) / float(nJJM) << "%)" << endl;
+            cout << "\t# of Z-photon:\t\t" << bkgTypes.Zph << "\t(" << 100 * float(bkgTypes.Zph) / float(nEv) << "%)"
+                 << "\t\t\t" << bkgTypesReco.Zph << "\t(" << 100 * float(bkgTypesReco.Zph) / float(nJJM) << "%)" << endl;
+            cout << "\t# of Z-Z:\t\t" << bkgTypes.ZZ << "\t(" << 100 * float(bkgTypes.ZZ) / float(nEv) << "%)"
+                 << "\t\t\t" << bkgTypesReco.ZZ << "\t(" << 100 * float(bkgTypesReco.ZZ) / float(nJJM) << "%)" << endl;
+            cout << "\t# of W-Z:\t\t" << bkgTypes.WZ << "\t(" << 100 * float(bkgTypes.WZ) / float(nEv) << "%)"
+                 << "\t\t\t" << bkgTypesReco.WZ << "\t(" << 100 * float(bkgTypesReco.WZ) / float(nJJM) << "%)" << endl;
+            cout << "\t# of W-photon:\t\t" << bkgTypes.Wph << "\t(" << 100 * float(bkgTypes.Wph) / float(nEv) << "%)"
+                 << "\t\t" << bkgTypesReco.Wph << "\t(" << 100 * float(bkgTypesReco.Wph) / float(nJJM) << "%)" << endl;
+            cout << endl;
+
+            cout << "\t# of lepFromPhys:\t" << bkgTypes.lepFromPhys << "\t(" << 100 * float(bkgTypes.lepFromPhys) / float(nEv) << "%)"
+                 << "\t\t\t" << bkgTypesReco.lepFromPhys << "\t(" << 100 * float(bkgTypesReco.lepFromPhys) / float(nJJM) << "%)" << endl;
+            cout << "\t\t lep=e: \t  [" << bkgTypes.eFromPhys << "\t  (" << 100 * float(bkgTypes.eFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
+                 << "\t\t  [" << bkgTypesReco.eFromPhys << "\t  (" << 100 * float(bkgTypesReco.eFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
+            cout << "\t\t lep=mu:\t  [" << bkgTypes.muFromPhys << "\t  (" << 100 * float(bkgTypes.muFromPhys) / float(bkgTypes.lepFromPhys) << "%)]"
+                 << "\t\t  [" << bkgTypesReco.muFromPhys << "\t  (" << 100 * float(bkgTypesReco.muFromPhys) / float(bkgTypesReco.lepFromPhys) << "%)]" << endl;
+            cout << endl;
+
+            cout << "\t# of others:\t\t" << bkgTypes.others << "\t(" << 100 * float(bkgTypes.others) / float(nEv) << "%)"
+                 << "\t\t" << bkgTypesReco.others << "\t(" << 100 * float(bkgTypesReco.others) / float(nJJM) << "%)" << endl;
+            cout << "\t\t Have electron:\t  [" << bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
+                 << "\t\t  [" << bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+            cout << "\t\t No electron:  \t  [" << bkgTypes.others - bkgTypes.others_haveEle << "\t  (" << 100 * float(bkgTypes.others - bkgTypes.others_haveEle) / float(bkgTypes.others) << "%)]"
+                 << "\t  [" << bkgTypesReco.others - bkgTypesReco.others_haveEle << "\t  (" << 100 * float(bkgTypesReco.others - bkgTypesReco.others_haveEle) / float(bkgTypesReco.others) << "%)]" << endl;
+            cout << "\t---------------------------------------------------------------------------------" << endl;
+        }
     }
 
     tr.Write();
     fea.Close();
     cout << "Writing to: " << outputFile << "\n\n";
+    Int_t pos = type.find("_");
+    if (type[0] == 'b') {
+        cout << "STORE: t=b; E=" << type.substr(1, -1) << "; m=" << NAN << "; e=" << float(nJJM) / float(nEv) << " END STORE";
+    } else {
+        cout << "STORE: t=" << type.substr(0, 2) << "; E=" << type.substr(2, pos - 2) << "; m=" << type.substr(pos + 1, -1) << "; e=" << float(nJJM) / float(nEv) << " END STORE";
+    }
 }

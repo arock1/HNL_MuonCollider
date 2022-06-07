@@ -1,3 +1,5 @@
+// Classifying the Signal and Background types
+
 #include <iostream>
 using namespace std;
 
@@ -103,8 +105,8 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 NTrue_.SetPtEtaPhiE(NParticle->PT, NParticle->Eta, NParticle->Phi, NParticle->E);
 
                 iFSTrue_.iLeps.push_back(lepTrue_);
-                iFSTrue_.iJets.push_back(Q1True_);
-                iFSTrue_.iJets.push_back(Q2True_);
+                iFSTrue_.i2Jets.push_back(Q1True_);
+                iFSTrue_.i2Jets.push_back(Q2True_);
                 iFSTrue_.iLepCharges.push_back(lepCharge);
                 if (typeLep == 11) iFSTrue_.iElectronIndeces.push_back(iLepTrue);
                 if (typeLep == 13) iFSTrue_.iMuonIndeces.push_back(iLepTrue);

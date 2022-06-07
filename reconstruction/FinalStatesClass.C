@@ -1,3 +1,5 @@
+// Define the class of the targeted final states, and used later in reconstruction
+
 #pragma once
 
 #include <vector>
