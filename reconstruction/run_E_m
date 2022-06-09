@@ -9,31 +9,23 @@ echo " =========================================================================
 echo -e " ||\t\t\t\t mN: $2 TeV \t\t\t\t||"
 echo -e " =========================================================================\n"
 
-declare -a types=("t" "s")
-declare -a fermtpyes=("M" "D")
+    
+declare -a types=("b")
+declare -a bkgtpyes=("2W" "sZ")
 
-for f in "${fermtpyes[@]}"
+for f in "${bkgtpyes[@]}"
 do 
     for t in "${types[@]}"
     do 
-        FILE="allinone.C(\"${t}${f}${1}_${2}\", true, 0, 0)"
-        echo -e "\n\n\n\t----------------------------------------------"
-        echo -e "\t----- Runing $FILE -----"
-        echo -e "\t----------------------------------------------"
+        FILE="allinone_ISR.C(\"${t}_${f}_${1}\", true, 0)"
+        echo -e "\n\n\n\t-------------------------------------------------------------"
+        echo -e "\t-----\tRuning $FILE\t-----"
+        echo -e "\t-------------------------------------------------------------"
         root -l << EOC 
         .x $FILE 
         .q 
 EOC
     done
 done 
-    
-FILE="allinone.C(\"b${1}\", true, 0, 0)"
-echo -e "\t----------------------------------------------"
-echo -e "\t----- Runing $FILE -----"
-echo -e "\t----------------------------------------------\n\n\n"
-root -l << EOC 
-.x $FILE 
-.q 
-EOC
 echo -e "\n\n"
 
