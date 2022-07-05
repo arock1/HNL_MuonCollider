@@ -1,0 +1,30 @@
+#!/bin/sh
+
+#./this_file ./converterLHEtoHEPMC /PATH/TO/INPUT/LHEF /PATH/TO/OUPUT/ROOT
+
+if [ "$#" != 3 ]; then
+    echo "only got $# inputs, need 2."
+    echo "input: ./this_file [convertLHEtoHEPMC] [.lhe] [.root]"
+else
+    # split the input LHE file name by "."
+    LHEFileName=(${2//".lhe"/ })
+    HEMPCName=${LHEFileName[0]}".hepmc"
+
+    ROOTFileName=(${3//".root"/ })
+
+    PYTHIAOUTName=${LHEFileName[0]}"_convertLHEtoHEPMC.out"
+    DELPHESOUTName="../log/"${ROOTFileName[0]}"_convertHEPMCtoROOT.out"
+
+    echo -e "Converting\t$2"
+    echo -e "\tto\t$HEMPCName"
+    echo -e "\tLog:\t$PYTHIAOUTName\n"
+    #$PYTHIA8/HNL/convertLHEtoHEPMC_v2 $1 $HEMPCName > $PYTHIAOUTName
+    $1 $2 $HEMPCName > $PYTHIAOUTName
+
+    echo -e "Converting\t$HEMPCName"
+    echo -e "\tto\t$3"
+    echo -e "\tLog:\t$DELPHESOUTName"
+    #$DELPHES/DelphesHepMC2 $DELPHES/cards/delphes_card_MuonColliderDet.tcl $2 $HEMPCName > $DELPHESOUTName
+    $DELPHES/DelphesHepMC2 $DELPHES/cards/delphes_card_MuonColliderDet_HNL.tcl $3 $HEMPCName > $DELPHESOUTName
+
+fi

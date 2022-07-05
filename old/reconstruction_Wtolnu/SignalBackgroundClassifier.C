@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-#include "FinalStatesClass.C"
+#include "FinalStatesClass_Wtoll.C"
 #include "TClonesArray.h"
 #include "TLorentzVector.h"
 #include "classes/DelphesClasses.h"
@@ -37,12 +37,12 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
     for (Int_t iN = 0; iN < nParticles; iN++) {
         foundN = 0;
         particle = (GenParticle*)branchParticle->At(iN);
-        cout << particle->PID << endl;
+        // cout << particle->PID << endl;
 
         if (abs(particle->PID) == NPID) {  // find HNL
 
-            cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
-            cout << "found N1" << endl;
+            // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
+            // cout << "found N1" << endl;
 
             foundN = 1;
             iNTrue = iN;

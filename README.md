@@ -34,5 +34,17 @@ Modify the target sqrt{s}(cm), mass(mN), and the reweighting |V|^2 (can use defa
 
 
 
+File system: 
+There could be multiple final states e.g. N>lW(>jj), N>lW(>lv)
+So, make two folders for the two main channels 
+Name: N_ljj means the first channels; N_llv means the second channels 
+Inside each channel folder:
+Having main folder:
+1. reconstruction: mainly .C codes, and scripts to run all sig/bg for convenient
+2. data:
+    a. detector: the raw data after Delphes simulation 
+    b. features: the features extracted from the reconstruction, and to be used in the BDT later
+3. python: BDT or other related python anaylsis
 
-
+Some common and useful files:
+1. scripts: e.g. the converter for the data, and the eff, and the yields

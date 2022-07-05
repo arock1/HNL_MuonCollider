@@ -1,0 +1,98 @@
+Run E=3 reconstrcuctions.
+
+ ===================================================
+ ||                 ebeam: 3 TeV                 ||
+ ===================================================
+
+
+
+	-------------------------------------------------------------
+	-----	Runing allinone_ISR.C("b_aMu_qql_3", true, 0)	-----
+	-------------------------------------------------------------
+Processing Background data
+
+Reading: ../data/detector/bg_aMu_qql_E-3.root
+Expected outputFile: ../data/features/bg_aMu_qql_E-3_reco.root
+
+Reconstruction Progress: 0/100Reconstruction Progress: 100/100
+
+	---------------------------------------------------------------------------------
+	==============================       Cut eff.      ==============================
+	---------------------------------------------------------------------------------
+	# of targeted events in truth level:			100
+	# after identified final states:			31	(31%)
+	# after lepton eta cut 	(eta(l) <= 2.5):		31	(100%)
+	# after lepton pt cut 	(pT(l) >= 100):			4	(12.9032%)
+	# after jj pt cut 	(pT(jj) >= 100):		1	(25%)
+	# after jj mass cut 	(70.0479 <= m(jj) <= 90.7481):	0	(0%)
+	---------------------------------------------------------------------------------
+						Total eff.:	0 / 100	(0 %) 
+	---------------------------------------------------------------------------------
+
+
+
+Writing to: ../data/features/bg_aMu_qql_E-3_reco.root
+
+STORE: ../data/features/bg_aMu_qql_E-3_reco.root; e=0 END STORE
+
+
+	-------------------------------------------------------------
+	-----	Runing allinone_ISR.C("b_MuMu_qqlv_3", true, 0)	-----
+	-------------------------------------------------------------
+Processing Background data
+
+Reading: ../data/detector/bg_MuMu_qqlv_E-3.root
+Expected outputFile: ../data/features/bg_MuMu_qqlv_E-3_reco.root
+
+Reconstruction Progress: 0/100Reconstruction Progress: 100/100
+
+	---------------------------------------------------------------------------------
+	==============================       Cut eff.      ==============================
+	---------------------------------------------------------------------------------
+	# of targeted events in truth level:			100
+	# after identified final states:			8	(8%)
+	# after lepton eta cut 	(eta(l) <= 2.5):		8	(100%)
+	# after lepton pt cut 	(pT(l) >= 100):			7	(87.5%)
+	# after jj pt cut 	(pT(jj) >= 100):		4	(57.1429%)
+	# after jj mass cut 	(70.0479 <= m(jj) <= 90.7481):	3	(75%)
+	---------------------------------------------------------------------------------
+						Total eff.:	3 / 100	(3 %) 
+	---------------------------------------------------------------------------------
+
+
+
+Writing to: ../data/features/bg_MuMu_qqlv_E-3_reco.root
+
+STORE: ../data/features/bg_MuMu_qqlv_E-3_reco.root; e=0.03 END STORE
+
+
+	-------------------------------------------------------------
+	-----	Runing allinone_ISR.C("b_MuMu_qqll_3", true, 0)	-----
+	-------------------------------------------------------------
+Processing Background data
+
+Reading: ../data/detector/bg_MuMu_qqll_E-3.root
+Expected outputFile: ../data/features/bg_MuMu_qqll_E-3_reco.root
+
+Reconstruction Progress: 0/100Reconstruction Progress: 100/100
+
+	---------------------------------------------------------------------------------
+	==============================       Cut eff.      ==============================
+	---------------------------------------------------------------------------------
+	# of targeted events in truth level:			100
+	# after identified final states:			6	(6%)
+	# after lepton eta cut 	(eta(l) <= 2.5):		6	(100%)
+	# after lepton pt cut 	(pT(l) >= 100):			0	(0%)
+	# after jj pt cut 	(pT(jj) >= 100):		0	(-nan%)
+	# after jj mass cut 	(70.0479 <= m(jj) <= 90.7481):	0	(-nan%)
+	---------------------------------------------------------------------------------
+						Total eff.:	0 / 100	(0 %) 
+	---------------------------------------------------------------------------------
+
+
+
+Writing to: ../data/features/bg_MuMu_qqll_E-3_reco.root
+
+STORE: ../data/features/bg_MuMu_qqll_E-3_reco.root; e=0 END STORE
+
+
