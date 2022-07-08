@@ -11,15 +11,23 @@ public:
     Float_t pxLep;
     Float_t pyLep;
     Float_t pzLep;
-    Int_t chargeLep;    // charge of lepton
-    Int_t lepisMu = 0;  // type of lepton (1: muon; 0: eletron)
+    Int_t chargeLep;     // charge of lepton
+    Int_t lepisEle = 0;  // type of lepton (0: muon; 1: eletron; 0: tau)
+    Int_t lepisMu = 0;   // type of lepton (1: muon; 0: eletron; 0:tau)
 
     Float_t mJJ;    // mass of W
+    Float_t EJJ;    // energy of W
+    Float_t PJJ;    // energy of W
     Float_t ptJJ;   // pt of W
     Float_t etaJJ;  // eta of W
     Float_t phiJJ;  // phi of W
+    Float_t pxJJ;   // phi of W
+    Float_t pyJJ;   // phi of W
+    Float_t pzJJ;   // phi of W
 
     Float_t mN;    // mass of N
+    Float_t EN;    // mass of N
+    Float_t PN;    // mass of N
     Float_t ptN;   // pt of N
     Float_t etaN;  // eta of N
     Float_t phiN;  // phi of N
@@ -40,8 +48,29 @@ public:
     Float_t DeltaPhijjl;      // Delta phi of lepton and JJ (from W)
 
     Float_t ptFwMu = 99999;  // pt of the forward muon
+
+    Float_t tau1 = 99999;
+    Float_t tau2 = -99999;
+    // =============================================================
+    // Truth level
+    Float_t EJJTrue;
+    Float_t PJJTrue;
+    Float_t etaJJTrue;
+    Float_t phiJJTrue;
+
+    Float_t ptLepTrue;
+    Float_t etaLepTrue;
+    Float_t pxLepTrue;
+    Float_t pyLepTrue;
+    Float_t pzLepTrue;
+
     // =============================================================
     // extra, just for trial
     Float_t MET;
     Float_t DeltaPhiNMET;
+
+    Float_t ptl2;
+    Float_t pzl2;
+    Float_t El2;
+    Float_t mJJl2;
 };

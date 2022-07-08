@@ -11,9 +11,13 @@ struct iFinalStates {
     Int_t foundAll = 0;
     // Int_t iW;
     vector<TLorentzVector> iLeps;
+    vector<Int_t> typeLeps;
     vector<Int_t> iElectronIndeces;
     vector<Int_t> iMuonIndeces;
+    vector<Int_t> iTauIndeces;
     vector<Int_t> iLepCharges;
     vector<TLorentzVector> i1Jets;
     vector<TLorentzVector> i2Jets;
+    Float_t tau1;
+    Float_t tau2;
 };

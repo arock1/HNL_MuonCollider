@@ -77,6 +77,8 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         inputFile_st += words[2];
         inputFile_st += "_m-";
         inputFile_st += words[3];
+        // inputFile_st += "_tau";
+        // inputFile_st += "_l";
         inputFile_st += ".root";
 
         // expect: "../features_ISR/sig_Maj_E-3_m-1000_reco.root"
@@ -137,7 +139,8 @@ void allinone_ISR(
     const string type,
     const Bool_t save = false,
     Int_t num_test = 0,
-    Int_t print_detail = 1) {
+    Int_t print_detail = 1,
+    Int_t all_on = 1) {
     // formmating the input output files
     string inputFile_st;
     string outputFile_st;
@@ -169,8 +172,11 @@ void allinone_ISR(
     TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
+    TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
     TClonesArray* branchMET = treeReader->UseBranch("MissingET");
     TClonesArray* branchFwMu = treeReader->UseBranch("ForwardMuon");
+
+    TClonesArray* branchTrack = treeReader->UseBranch("Track");
 
     // book feature storing tree and file
     TFile fea(outputFile, "recreate");
@@ -205,7 +211,6 @@ void allinone_ISR(
         // cout << "\nEvent: " << i_en << endl;
 
         treeReader->ReadEntry(i_en);  // reading the entry
-        nEv += 1;
 
         //========================================================================
         //=======================   Classifiy Event Type   =======================
@@ -220,75 +225,41 @@ void allinone_ISR(
             } else if (type.at(2) == 'D') {  // Dirac
                 passing = ClassifySingal(branchParticle, &iFSTrue, &NTrue, 9990012);
             }
-            lepTrue = iFSTrue.iLeps[0];
-            jet1True_ = iFSTrue.i2Jets[0];
-            jet2True_ = iFSTrue.i2Jets[1];
-            if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
-            if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
         } else {
             passing = ClassifyiBackground(branchParticle, &bkgTypes);
         }
 
         if (passing == 0) continue;
+        nEv += 1;
+        if (type.at(0) == 's') {  // search for signals
+            lepTrue = iFSTrue.iLeps[0];
+            jet1True_ = iFSTrue.i2Jets[0];
+            jet2True_ = iFSTrue.i2Jets[1];
+            if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
+            if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
+        }
 
         TLorentzVector jjTrue;
         jjTrue = jet1True_ + jet2True_;
+
         //========================================================================
         //=======================      Reconstruction      =======================
         //========================================================================
         iFinalStates iFS;
         // finding final states: lepton + 1 (or 2) jet
-        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
-
-        if (iFS.foundAll == 0) continue;
+        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet, branchVLC3Jet);
+        if (all_on && iFS.foundAll == 0) continue;
         nFS += 1;  // found the targeted final states
 
         TLorentzVector jet1, jet21, jet22, jet2;
         TLorentzVector lep, jj, N;
 
-        // if there are both one jet and two jets, then pick the one with mass closest to W boson
-        // if there is only one(two) jet, then assign that as an W jet
-        if (iFS.i1Jets.size() == 1 && iFS.i2Jets.size() == 2) {
-            jet1 = iFS.i1Jets[0];
-            jet21 = iFS.i2Jets[0];
-            jet22 = iFS.i2Jets[1];
-            jet2 = jet21 + jet22;
-            if (abs(jet1.M() - mWPDG) < abs(jet2.M() - mWPDG)) {
-                jj = jet1;
-            } else {
-                jj = jet2;
-            }
-        } else if (iFS.i1Jets.size() == 1 && iFS.i2Jets.size() == 0) {
-            jj = iFS.i1Jets[0];
-        } else if (iFS.i1Jets.size() == 0 && iFS.i2Jets.size() == 2) {
-            jet21 = iFS.i2Jets[0];
-            jet22 = iFS.i2Jets[1];
-            jj = jet21 + jet22;
-        }
+        jj = getWJet(iFS);
 
-        // loop over all the leptons
-        Float_t ptLepMax = -99999;
         Int_t chargeLep;
-        Int_t lepIndex;
         Int_t typeLep;
-        Int_t foundLep = 0;
-        for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
-            TLorentzVector lepI = iFS.iLeps[il];
-            // eta cut
-            if (not(abs(lepI.Eta()) <= lepEtaCut)) continue;
-            // store the lepton with max. pT among all
-            if (lepI.Pt() > ptLepMax) {
-                chargeLep = iFS.iLepCharges[il];
-                foundLep = 1;
-                ptLepMax = lepI.Pt();
-                lep = lepI;
-                lepIndex = il;
-                if (il < iFS.iElectronIndeces.size()) typeLep = 11;
-                if (il >= iFS.iElectronIndeces.size()) typeLep = 13;
-            }
-        }
-        // if no such lepton, then pass
-        if (foundLep == 0) continue;
+        lep = getLep(iFS, jj, &typeLep, &chargeLep);
+        // if (abs(lep.Eta()) > lepEtaCut) continue;
         nLepEta += 1;
 
         // reconstruct N
@@ -298,13 +269,13 @@ void allinone_ISR(
         //=======================           Cuts           =======================
         //========================================================================
 
-        if (not(lep.Pt() >= lepPtCut)) continue;
+        if (all_on && not(lep.Pt() >= lepPtCut)) continue;
         nLepPt += 1;
 
-        if (not(jj.Pt() >= jjPtCut)) continue;
+        if (all_on && not(jj.Pt() >= jjPtCut)) continue;
         nJJPt += 1;
 
-        if (not(jj.M() >= WMLowCut && jj.M() <= WMHighCut)) continue;
+        if (all_on && not(jj.M() >= WMLowCut && jj.M() <= WMHighCut)) continue;
         nJJM += 1;
 
         //========================================================================
@@ -321,19 +292,27 @@ void allinone_ISR(
         features->pxLep = lep.Px();
         features->pyLep = lep.Py();
         features->pzLep = lep.Pz();
+
         // lepton info for distinguishing Maj/Dir
         features->chargeLep = chargeLep;
         if (typeLep == 13) features->lepisMu = 1;
-        if (typeLep == 11) features->lepisMu = 0;
+        if (typeLep == 11) features->lepisEle = 0;
 
         // W boson 4-momentum info
         features->mJJ = jj.M();
+        features->EJJ = jj.E();
+        features->PJJ = jj.P();
         features->ptJJ = jj.Pt();
         features->etaJJ = jj.Eta();
         features->phiJJ = jj.Phi();
+        features->pxJJ = jj.Px();
+        features->pyJJ = jj.Py();
+        features->pzJJ = jj.Pz();
 
         // HNL 4-momentum info
         features->mN = N.M();
+        features->EN = N.E();
+        features->PN = N.P();
         features->ptN = N.Pt();
         features->etaN = N.Eta();
         features->phiN = N.Phi();
@@ -361,6 +340,10 @@ void allinone_ISR(
             features->etaJet2 = jet22.Pt();
             features->phiJet2 = jet22.Phi();
         }
+        if (iFS.i1Jets.size() == 1) {
+            features->tau1 = iFS.tau1;
+            features->tau2 = iFS.tau2;
+        }
 
         // angular distance between the W and lepton
         Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
@@ -383,7 +366,41 @@ void allinone_ISR(
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
             features->ptFwMu = fwmu->PT;
+            cout << " fwmu: " << fwmu->PT << "\n";
         }
+
+        features->EJJTrue = jjTrue.E();
+        features->PJJTrue = jjTrue.P();
+        features->etaJJTrue = jjTrue.Eta();
+        features->phiJJTrue = jjTrue.Phi();
+
+        features->etaLepTrue = lepTrue.Eta();
+        features->ptLepTrue = lepTrue.Pt();
+        features->pxLepTrue = lepTrue.Px();
+        features->pyLepTrue = lepTrue.Py();
+        features->pzLepTrue = lepTrue.Pz();
+
+        Int_t nJetcon;
+        Jet* wjet1 = (Jet*)branchVLC1Jet->At(0);
+
+        // cout << " true eta: " << jjTrue.Eta() << "\n";
+        // cout << " reco eta: " << jj.Eta() << "\n";
+        // cout << " true phi: " << jjTrue.Phi() << "\n";
+        // cout << " reco phi: " << jj.Phi() << "\n";
+        // cout << " true E:   " << jjTrue.E() << "\n";
+        // cout << " reco E:   " << jj.E() << "\n";
+        // cout << endl;
+
+        Int_t nTracks;
+        nTracks = branchTrack->GetEntries();
+        // for (Int_t it = 0; it < nTracks; it++) {
+        // Track* tr =
+        //}
+
+        // cout << " N: " << N.M() << "\n";
+        // cout << " lep E  : " << lep.E() << "; " << lepTrue.E() << "\n";
+        // cout << " lep eta: " << lep.Eta() << "; " << lepTrue.Eta() << "\n";
+        // cout << " lep phi: " << lep.Phi() << "; " << lepTrue.Phi() << "\n";
 
         tr.Fill();
     }

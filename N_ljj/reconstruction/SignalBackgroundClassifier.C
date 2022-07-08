@@ -49,9 +49,36 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
 
             for (Int_t i = 0; i < nParticles; i++) {  // find lepton (electron or muon only)
                 particle0 = (GenParticle*)branchParticle->At(i);
-                if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
+
+                // if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13 || abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
+                //  if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
+                if ((abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
                     // cout << particle0->PID << endl;
+                    // cout << " particle0: " << particle0->Eta << "\n";
                     // cout << "Found Lepton: " << particle0->PID << endl;
+                    // cout << " particle0 eta : " << particle0->Eta << "\n";
+                    // cout << " particle0 pt  : " << particle0->PT << "\n";
+
+                    // testing
+                    // for (Int_t i00 = 0; i00 < nParticles; i00++) {
+                    // GenParticle* particle000 = (GenParticle*)branchParticle->At(i00);
+                    //// if (particle000->M1 == i) cout << " text: \n";
+                    // if (particle000->M1 == i) cout << particle000->PID << endl;
+                    // if (abs(particle000->PID) == 15) {
+                    // for (Int_t i000 = 0; i000 < nParticles; i000++) {
+                    // GenParticle* particle0000 = (GenParticle*)branchParticle->At(i000);
+                    // if (particle0000->M1 == i00) cout << particle0000->PID << "\n\n";
+                    //// if (abs(particle0000->PID) == 15) {
+                    //// for (Int_t i0000 = 0; i0000 < nParticles; i0000++) {
+                    //// GenParticle* particle00000 = (GenParticle*)branchParticle->At(i0000);
+                    //// if (particle00000->M1 == i000) cout << particle00000->PID << "\n\n";
+                    ////}
+                    ////}
+                    //}
+                    //}
+                    //}
+                    //
+                    // end testing
 
                     foundLep = 1;
                     iLepTrue = i;
@@ -90,7 +117,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 }
                 if (foundQ1 == 1 && foundQ2 == 1) break;
             }
-            if (foundN == 1 && foundQ1 == 1 && foundQ2 == 1) {
+            if (foundN == 1 && foundQ1 == 1 && foundQ2 == 1 && foundLep) {
                 iFinalStates iFSTrue_;
 
                 GenParticle* lepParticle = (GenParticle*)branchParticle->At(iLepTrue);
@@ -103,6 +130,9 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 Q1True_.SetPtEtaPhiM(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, 0);
                 Q2True_.SetPtEtaPhiM(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, 0);
                 NTrue_.SetPtEtaPhiE(NParticle->PT, NParticle->Eta, NParticle->Phi, NParticle->E);
+
+                // cout << " lep: " << lepTrue_.Pt() << "\n";
+                // cout << " lep: " << lepTrue_.Eta() << "\n";
 
                 iFSTrue_.iLeps.push_back(lepTrue_);
                 iFSTrue_.i2Jets.push_back(Q1True_);

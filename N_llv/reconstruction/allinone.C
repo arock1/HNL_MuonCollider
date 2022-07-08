@@ -167,10 +167,10 @@ void allinone(
             sortedLeps.push_back(iFS.iLeps[0]);
         }
 
-        cout << " lep1:    " << sortedLeps[0].Px() / sortedLeps[0].Pt() << "; " << sortedLeps[0].Py() / sortedLeps[0].Pt() << "\n";
-        cout << " lep2:    " << sortedLeps[1].Px() / sortedLeps[1].Pt() << "; " << sortedLeps[1].Py() / sortedLeps[1].Pt() << "\n";
-        cout << " NTrue:   " << NTrue.Px() / NTrue.Pt() << "; " << NTrue.Py() / NTrue.Pt() << "\n";
-        cout << endl;
+        // cout << " lep1:    " << sortedLeps[0].Px() / sortedLeps[0].Pt() << "; " << sortedLeps[0].Py() / sortedLeps[0].Pt() << "\n";
+        // cout << " lep2:    " << sortedLeps[1].Px() / sortedLeps[1].Pt() << "; " << sortedLeps[1].Py() / sortedLeps[1].Pt() << "\n";
+        // cout << " NTrue:   " << NTrue.Px() / NTrue.Pt() << "; " << NTrue.Py() / NTrue.Pt() << "\n";
+        // cout << endl;
 
         TLorentzVector W1, W2;
         for (Int_t iLeps = 0; iLeps < 2; iLeps++) {  // loop over the tagged leptons
