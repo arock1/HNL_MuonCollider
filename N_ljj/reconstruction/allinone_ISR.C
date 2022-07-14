@@ -297,7 +297,7 @@ void allinone_ISR(
         // lepton info for distinguishing Maj/Dir
         features->chargeLep = chargeLep;
         if (typeLep == 13) features->lepisMu = 1;
-        if (typeLep == 11) features->lepisEle = 0;
+        if (typeLep == 11) features->lepisEle = 1;
 
         // W boson 4-momentum info
         features->mJJ = jj.M();
