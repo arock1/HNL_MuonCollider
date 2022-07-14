@@ -32,13 +32,14 @@ extern Float_t mWPDG, widthWPDG;
 Float_t mWPDG = WPDG->Mass();
 Float_t widthWPDG = WPDG->Width();
 
-iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet, TClonesArray* branchVLC3Jet) {
+// iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet, TClonesArray* branchVLC3Jet) {
+iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
     iFinalStates iFinalStatesIndexes;
     Int_t nElectrons = branchElectron->GetEntries();
     Int_t nMuons = branchMuon->GetEntries();
     Int_t nVLC1Jets = branchVLC1Jet->GetEntries();
     Int_t nVLC2Jets = branchVLC2Jet->GetEntries();
-    Int_t nVLC3Jets = branchVLC3Jet->GetEntries();
+    // Int_t nVLC3Jets = branchVLC3Jet->GetEntries();
 
     // Int_t iTauJet = 0;
     // Int_t tauTagged = 0;

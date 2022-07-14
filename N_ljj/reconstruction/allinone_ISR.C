@@ -1,4 +1,6 @@
 //
+//
+//
 // ===========================================================================
 // || This Code Does:                                                       ||
 // || 1. Classifiy the event type (Signal / What Background type)           ||
@@ -147,6 +149,12 @@ void allinone_ISR(
 
     Int_t foundFiles;
     foundFiles = getFileNames(type, &inputFile_st, &outputFile_st);
+    inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_CustomizedJet.root";
+    outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV.root";
+    // inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_Dirac_CustomizedJet.root";
+    // outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV_Dirac.root";
+    // inputFile_st = "../data/detector/background_inclusive_E-3TeV_CustomizedJet.root";
+    // outputFile_st = "../../old/features/background_reco_E-3TeV.root";
 
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
@@ -172,7 +180,7 @@ void allinone_ISR(
     TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
-    TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
+    // TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
     TClonesArray* branchMET = treeReader->UseBranch("MissingET");
     TClonesArray* branchFwMu = treeReader->UseBranch("ForwardMuon");
 
@@ -248,7 +256,8 @@ void allinone_ISR(
         //========================================================================
         iFinalStates iFS;
         // finding final states: lepton + 1 (or 2) jet
-        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet, branchVLC3Jet);
+        // iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet, branchVLC3Jet);
+        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
         if (all_on && iFS.foundAll == 0) continue;
         nFS += 1;  // found the targeted final states
 
@@ -296,8 +305,16 @@ void allinone_ISR(
 
         // lepton info for distinguishing Maj/Dir
         features->chargeLep = chargeLep;
-        if (typeLep == 13) features->lepisMu = 1;
-        if (typeLep == 11) features->lepisEle = 1;
+        Int_t lepisMu_ = 0, lepisEle_ = 0;
+        if (typeLep == 13) {
+            lepisMu_ = 1;
+            lepisEle_ = 0;
+        } else if (typeLep == 11) {
+            lepisMu_ = 0;
+            lepisEle_ = 1;
+        }
+        features->lepisMu = lepisMu_;
+        features->lepisMu = lepisEle_;
 
         // W boson 4-momentum info
         features->mJJ = jj.M();
@@ -322,29 +339,43 @@ void allinone_ISR(
         features->pzN = N.Pz();
 
         // angular distance between the (two jets) and (W and lepton)
-        Float_t DeltaRjj, DeltaRjjl;
+        Float_t DeltaRjj = 99999, DeltaRjjl = 99999;
         // angular distance between the two jets, only if there are two jets in VLC branch
+        Float_t EJ1 = 99999, ptJ1 = 99999, etaJ1 = 99999, phiJ1 = 99999;
+        Float_t EJ2 = 99999, ptJ2 = 99999, etaJ2 = 99999, phiJ2 = 99999;
         if (iFS.i2Jets.size() == 2) {
             Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
             Float_t jjPhiDiff = deltaPhi(jet1.Phi(), jet2.Phi());
             DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
-            features->DeltaRjj = DeltaRjj;
             // the energy of the jets, used as info to measure the imbalance
             // (since the W boson in t-ch is mostly longitudnal, so generally small imbalance)
-            features->EJet1 = jet21.E();
-            features->ptJet1 = jet21.Pt();
-            features->etaJet1 = jet21.Pt();
-            features->phiJet1 = jet21.Phi();
+            EJ1 = jet21.E();
+            ptJ1 = jet21.Pt();
+            etaJ1 = jet21.Pt();
+            phiJ1 = jet21.Phi();
 
-            features->EJet2 = jet22.E();
-            features->ptJet2 = jet22.Pt();
-            features->etaJet2 = jet22.Pt();
-            features->phiJet2 = jet22.Phi();
+            EJ2 = jet22.E();
+            ptJ2 = jet22.Pt();
+            etaJ2 = jet22.Pt();
+            phiJ2 = jet22.Phi();
         }
+        features->DeltaRjj = DeltaRjj;
+        features->EJet1 = EJ1;
+        features->ptJet1 = ptJ1;
+        features->etaJet1 = etaJ1;
+        features->phiJet1 = phiJ1;
+        features->EJet2 = EJ2;
+        features->ptJet2 = ptJ2;
+        features->etaJet2 = etaJ2;
+        features->phiJet2 = phiJ2;
+
+        Float_t tau1_ = 99999, tau2_ = 99999;
         if (iFS.i1Jets.size() == 1) {
-            features->tau1 = iFS.tau1;
-            features->tau2 = iFS.tau2;
+            tau1_ = iFS.tau1;
+            tau2_ = iFS.tau2;
         }
+        features->tau1 = tau1_;
+        features->tau2 = tau2_;
 
         // angular distance between the W and lepton
         Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
@@ -354,21 +385,15 @@ void allinone_ISR(
         features->DeltaPhijjl = jjlPhiDiff;  // the phi difference between the W and lepton
 
         // extra, just for trial
-        Int_t nMET = branchMET->GetEntries();
-        if (nMET != 0) {
-            MissingET* met = (MissingET*)branchMET->At(0);
-            features->MET = met->MET;
-            features->DeltaPhiNMET = deltaPhi(met->Phi, N.Phi());
-        }
-
-        // extra, just for trial
         // the forward muon info, for distinguishing the ISR mu-photon interaction
         Int_t nFwMu = branchFwMu->GetEntries();
+        Float_t ptFwmu = 99999;
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
-            features->ptFwMu = fwmu->PT;
+            ptFwmu = fwmu->PT;
             // cout << " fwmu: " << fwmu->PT << "\n";
         }
+        features->ptFwMu = ptFwmu;
 
         features->EJJTrue = jjTrue.E();
         features->PJJTrue = jjTrue.P();
