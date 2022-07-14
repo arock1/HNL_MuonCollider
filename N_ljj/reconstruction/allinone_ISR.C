@@ -138,9 +138,9 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
 void allinone_ISR(
     const string type,
     const Bool_t save = false,
-    Int_t num_test = 0,
+    Int_t num_test = 0,  // 0: run all data samples
     Int_t print_detail = 1,
-    Int_t all_on = 1) {
+    Int_t all_on = 1) {  // turn on all the cuts
     // formmating the input output files
     string inputFile_st;
     string outputFile_st;
@@ -237,6 +237,7 @@ void allinone_ISR(
             jet2True_ = iFSTrue.i2Jets[1];
             if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
             if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
+            if (iFSTrue.iTauIndeces.size() == 1) typeLepTrue = 15;
         }
 
         TLorentzVector jjTrue;
@@ -366,7 +367,7 @@ void allinone_ISR(
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
             features->ptFwMu = fwmu->PT;
-            cout << " fwmu: " << fwmu->PT << "\n";
+            // cout << " fwmu: " << fwmu->PT << "\n";
         }
 
         features->EJJTrue = jjTrue.E();

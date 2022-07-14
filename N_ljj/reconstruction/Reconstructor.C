@@ -40,19 +40,20 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
     Int_t nVLC2Jets = branchVLC2Jet->GetEntries();
     Int_t nVLC3Jets = branchVLC3Jet->GetEntries();
 
-    Int_t iTauJet = 0;
-    Int_t tauTagged = 0;
-    // searching for jet that is tagged as tau
-    for (Int_t ij3 = 0; ij3 < nVLC3Jets; ij3++) {
-        Jet* jet3 = (Jet*)branchVLC3Jet->At(ij3);
-        if (jet3->TauTag == 1) {
-            tauTagged = 1;
-            iTauJet = ij3;
-        }
-    }
+    // Int_t iTauJet = 0;
+    // Int_t tauTagged = 0;
+    //// searching for jet that is tagged as tau
+    // for (Int_t ij3 = 0; ij3 < nVLC3Jets; ij3++) {
+    // Jet* jet3 = (Jet*)branchVLC3Jet->At(ij3);
+    // if (jet3->TauTag == 1) {
+    // tauTagged = 1;
+    // iTauJet = ij3;
+    //}
+    //}
 
     //  require at least one lepton
-    if (nElectrons + nMuons < 1 && tauTagged == 0) return iFinalStatesIndexes;
+    // if (nElectrons + nMuons < 1 && tauTagged == 0) return iFinalStatesIndexes;
+    if (nElectrons + nMuons < 1) return iFinalStatesIndexes;
     // require there be 1 or 2 jets, from W>qq
     if (nVLC1Jets != 1 && nVLC2Jets != 2) return iFinalStatesIndexes;
 
@@ -76,16 +77,16 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
         iFinalStatesIndexes.typeLeps.push_back(13);
     }
 
-    if (nElectrons + nMuons < 1) {
-        for (Int_t itau = 0; itau < tauTagged; itau++) {
-            Jet* tauJet = (Jet*)branchVLC3Jet->At(iTauJet);
-            lep.SetPtEtaPhiM(tauJet->PT, tauJet->Eta, tauJet->Phi, tauJet->Mass);
-            iFinalStatesIndexes.iLeps.push_back(lep);
-            iFinalStatesIndexes.iTauIndeces.push_back(iTauJet);
-            iFinalStatesIndexes.iLepCharges.push_back(tauJet->Charge);
-            iFinalStatesIndexes.typeLeps.push_back(15);
-        }
-    }
+    // if (nElectrons + nMuons < 1) {
+    // for (Int_t itau = 0; itau < tauTagged; itau++) {
+    // Jet* tauJet = (Jet*)branchVLC3Jet->At(iTauJet);
+    // lep.SetPtEtaPhiM(tauJet->PT, tauJet->Eta, tauJet->Phi, tauJet->Mass);
+    // iFinalStatesIndexes.iLeps.push_back(lep);
+    // iFinalStatesIndexes.iTauIndeces.push_back(iTauJet);
+    // iFinalStatesIndexes.iLepCharges.push_back(tauJet->Charge);
+    // iFinalStatesIndexes.typeLeps.push_back(15);
+    //}
+    //}
     // =============================================================
     TLorentzVector jet1;
     TLorentzVector jet21, jet22, jet2;

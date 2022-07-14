@@ -51,13 +51,13 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 particle0 = (GenParticle*)branchParticle->At(i);
 
                 // if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13 || abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
-                //  if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
-                if ((abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
-                    // cout << particle0->PID << endl;
-                    // cout << " particle0: " << particle0->Eta << "\n";
-                    // cout << "Found Lepton: " << particle0->PID << endl;
-                    // cout << " particle0 eta : " << particle0->Eta << "\n";
-                    // cout << " particle0 pt  : " << particle0->PT << "\n";
+                if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
+                    // if ((abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
+                    //  cout << particle0->PID << endl;
+                    //  cout << " particle0: " << particle0->Eta << "\n";
+                    //  cout << "Found Lepton: " << particle0->PID << endl;
+                    //  cout << " particle0 eta : " << particle0->Eta << "\n";
+                    //  cout << " particle0 pt  : " << particle0->PT << "\n";
 
                     // testing
                     // for (Int_t i00 = 0; i00 < nParticles; i00++) {
