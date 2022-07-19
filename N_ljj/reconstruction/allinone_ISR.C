@@ -149,12 +149,13 @@ void allinone_ISR(
 
     Int_t foundFiles;
     foundFiles = getFileNames(type, &inputFile_st, &outputFile_st);
-    inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_CustomizedJet.root";
-    outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV.root";
+    // inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_CustomizedJet.root";
+    // outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV.root";
     // inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_Dirac_CustomizedJet.root";
     // outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV_Dirac.root";
     // inputFile_st = "../data/detector/background_inclusive_E-3TeV_CustomizedJet.root";
     // outputFile_st = "../../old/features/background_reco_E-3TeV.root";
+    // inputFile_st = "../../old/data/tesing_hepmc3.root";
 
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
@@ -236,8 +237,8 @@ void allinone_ISR(
         } else {
             passing = ClassifyiBackground(branchParticle, &bkgTypes);
         }
-
         if (passing == 0) continue;
+
         nEv += 1;
         if (type.at(0) == 's') {  // search for signals
             lepTrue = iFSTrue.iLeps[0];
@@ -314,7 +315,7 @@ void allinone_ISR(
             lepisEle_ = 1;
         }
         features->lepisMu = lepisMu_;
-        features->lepisMu = lepisEle_;
+        features->lepisEle = lepisEle_;
 
         // W boson 4-momentum info
         features->mJJ = jj.M();
