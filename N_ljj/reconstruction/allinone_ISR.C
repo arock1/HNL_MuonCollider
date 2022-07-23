@@ -205,10 +205,15 @@ void allinone_ISR(
     BkgTypes bkgTypes;      // Count the type of bkg
     BkgTypes bkgTypesReco;  // count the type of bkg after reconstruction
 
-    Float_t lepEtaCut = 2.5;  // lep eta cut
-    Float_t lepPtCut = 100;   // lep pt cut
-    Float_t jjPtCut = 100;    // jj pt cut
+    // Float_t lepEtaCut = 2.5;                    // lep eta cut
+    // Float_t lepPtCut = 100;                     // lep pt cut
+    // Float_t jjPtCut = 100;                      // jj pt cut
+    // Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
+    // Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
+    Float_t lepEtaCut = 2.5;                    // lep eta cut
+    Float_t lepPtCut = 0;                       // lep pt cut
+    Float_t jjPtCut = 0;                        // jj pt cut
     Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
     Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
