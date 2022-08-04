@@ -1,0 +1,29 @@
+#!/bin/sh
+
+echo -e "Run E=$1 reconstrcuctions.\n"
+
+
+echo    " ==================================================="
+echo -e " ||                 ebeam: $1 TeV                 ||"
+echo    " ==================================================="
+
+    
+declare -a types=("b")
+declare -a bkgtpyes=("aMu_qql" "MuMu_qqlv" "MuMu_qqll")
+
+for f in "${bkgtpyes[@]}"
+do 
+    for t in "${types[@]}"
+    do 
+        FILE="allinone_ISR.C(\"${t}_${f}_${1}\", true, 0)"
+        echo -e "\n\n\n\t-------------------------------------------------------------"
+        echo -e "\t-----\tRuning $FILE\t-----"
+        echo -e "\t-------------------------------------------------------------"
+        root -l << EOC 
+        .x $FILE 
+        .q 
+EOC
+    done
+done 
+echo -e "\n\n"
+
