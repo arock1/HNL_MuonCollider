@@ -41,6 +41,7 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
 
         if (abs(particle->PID) == NPID) {  // find HNL
             // cout << (particle->Eta) << endl;
+            // if (abs(particle->Eta) > 2) continue;
 
             // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
             // cout << "found N1" << endl;

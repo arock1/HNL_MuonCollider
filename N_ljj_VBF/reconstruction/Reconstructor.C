@@ -177,6 +177,7 @@ TLorentzVector getLep(iFinalStates iFS, TLorentzVector jj, Int_t* typeLep, Int_t
     Int_t chargeLep_;
     Int_t typeLep_;
     TLorentzVector lepBest;
+    // cout << iFS.iLepCharges.size() << endl;
     for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
         TLorentzVector lepI = iFS.iLeps[il];
 

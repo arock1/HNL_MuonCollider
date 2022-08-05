@@ -61,7 +61,8 @@ Int_t getFileNames(string type, string* inputFile_st_, string* outputFile_st_) {
         }
 
         // expect: "../data/VBF_Maj_E-3_m-1000.root"
-        inputFile_st = "../data/detector/VBF_";
+        // inputFile_st = "../data/detector/VBF_";
+        inputFile_st = "../data/detector/sig_";
         string fermionType;
         if (words[1] == 'M') {
             fermionType = "Maj";
@@ -411,16 +412,32 @@ void allinone_ISR(
         nTracks = branchTrack->GetEntries();
 
         Int_t chargeLep2 = 999;
+        Int_t lep2isEle = 999;
+        Int_t lep2isMu = 999;
         if (iFS.iLeps.size() == 2) {
+            // cout << ".. " <<endl;
             TLorentzVector lep2;
              
+            // cout << endl;
+            // cout << i_en << endl;
             for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
                 TLorentzVector lepI = iFS.iLeps[il];
+                // cout << iFS.iLepCharges[il]<< endl;
                 if (lepI.Eta() == lep.Eta()) continue;
                 chargeLep2 = iFS.iLepCharges[il];
+                if (iFS.typeLeps[il] == 11) {
+                    lep2isEle = 1;
+                    lep2isMu = 0;
+                } else if (iFS.typeLeps[il] == 13) {
+                    lep2isEle = 0;
+                    lep2isMu = 1;
+                }
             }
         }
         features->chargeLep2 = chargeLep2;
+        features->lep2isEle = lep2isEle;
+        features->lep2isMu = lep2isMu;
+        // cout << features->chargeLep2<<endl;
 
         tr.Fill();
     }
