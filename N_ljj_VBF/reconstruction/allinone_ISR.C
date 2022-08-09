@@ -9,10 +9,13 @@
 // || 3. Reconstruct W jet                                                  ||
 // ||       a. If there is only (1VLC case found), use it as W jet          ||
 // ||       b. If there is only (2VLC case found), use their sum as W jet   ||
-// || 4. Select lepton (Need to have |eta|<threshold to simulate detector)  ||
-// ||       a. Pick the one with smallest P as the one from HNL             ||
+// || 4. Get HNL (Need to have |eta|<threshold to simulate detector)        ||
+// ||       a. Since there are at least two leptons,                        ||
+// ||          store the two with smallest eta                              ||
+// ||       b. Reconstruct two possible HNL with each lepton,               || 
+// ||          and let BDT decide how to use the info                       ||
 // || 5. Apply cuts                                                         ||
-// ||       a. lepton pT                                                    ||
+// ||       a. each lepton pT                                               ||
 // ||       b. W jet pT                                                     ||
 // ||       c. W jet mass                                                   ||
 // || 6. Store features for later BDT analysis                              ||
@@ -171,11 +174,12 @@ void allinone_ISR(
     TClonesArray* branchElectron = treeReader->UseBranch("Electron");
     TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
+    // TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR17N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
-    // TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
+    // TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR05N2");
+    TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
     TClonesArray* branchMET = treeReader->UseBranch("MissingET");
     TClonesArray* branchFwMu = treeReader->UseBranch("ForwardMuon");
-
     TClonesArray* branchTrack = treeReader->UseBranch("Track");
 
     // book feature storing tree and file
@@ -197,8 +201,8 @@ void allinone_ISR(
     BkgTypes bkgTypesReco;  // count the type of bkg after reconstruction
 
     Float_t lepEtaCut = 2.5;                    // lep eta cut
-    Float_t lepPtCut = 100;                     // lep pt cut
-    Float_t jjPtCut = 100;                      // jj pt cut
+    Float_t lepPtCut = 50;                     // lep pt cut
+    Float_t jjPtCut = 50;                      // jj pt cut
     Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
     Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
@@ -206,8 +210,10 @@ void allinone_ISR(
     for (Int_t i_en = 0; i_en < num_test; i_en++) {
         // progress
         if ((i_en % 1000) == 0) cout << "Reconstruction Progress: " << i_en << "/" << numberOfEntries << "\r";
+        //cout << i_en << endl;
         cout.flush();
         // cout << "\nEvent: " << i_en << endl;
+        // cout << "............................................." << endl;
 
         treeReader->ReadEntry(i_en);  // reading the entry
 
@@ -247,29 +253,32 @@ void allinone_ISR(
         //========================================================================
         iFinalStates iFS;
         // finding final states: at least two leptons + 1 (or 2) jet
-        // iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet, branchVLC3Jet);
         iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
         if (all_on && iFS.foundAll == 0) continue;
         nFS += 1;  // found the targeted final states
 
         TLorentzVector jet1, jet21, jet22, jet2;
-        TLorentzVector lep, jj, N;
+        TLorentzVector lep1, lep2, jj, N1, N2, JJLep1Lep2;
+        pair<Int_t, Int_t> chargeLeps;
+        pair<Int_t, Int_t> typeLeps;
+        pair<TLorentzVector, TLorentzVector> leps;
 
         jj = getWJet(iFS);
 
-        Int_t chargeLep;
-        Int_t typeLep;
-        lep = getLep(iFS, jj, &typeLep, &chargeLep);
+        getLep(iFS, jj, &typeLeps, &chargeLeps, &leps);
+        lep1 = leps.first; lep2 = leps.second;
         nLepEta += 1;
 
         // reconstruct N
-        N = jj + lep;
+        N1 = jj + lep1;
+        N2 = jj + lep2;
+        JJLep1Lep2 = jj + lep1 + lep2;
 
         //========================================================================
         //=======================           Cuts           =======================
         //========================================================================
 
-        if (all_on && not(lep.Pt() >= lepPtCut)) continue;
+        if (all_on && not(lep1.Pt() >= lepPtCut && lep2.Pt() >= lepPtCut)) continue;
         nLepPt += 1;
 
         if (all_on && not(jj.Pt() >= jjPtCut)) continue;
@@ -277,6 +286,7 @@ void allinone_ISR(
 
         if (all_on && not(jj.M() >= WMLowCut && jj.M() <= WMHighCut)) continue;
         nJJM += 1;
+        // cout << " .................................................................................. " <<endl;
 
         //========================================================================
         //=======================         Features         =======================
@@ -285,26 +295,43 @@ void allinone_ISR(
         features->iEvt = i_en;
 
         // lepton 4-momentum info
-        features->ptLep = lep.Pt();
-        features->etaLep = lep.Eta();
-        features->phiLep = lep.Phi();
-        features->ELep = lep.E();
-        features->pxLep = lep.Px();
-        features->pyLep = lep.Py();
-        features->pzLep = lep.Pz();
+        features->ptLep1 = lep1.Pt();
+        features->etaLep1 = lep1.Eta();
+        features->phiLep1 = lep1.Phi();
+        features->ELep1 = lep1.E();
+        features->pxLep1 = lep1.Px();
+        features->pyLep1 = lep1.Py();
+        features->pzLep1 = lep1.Pz();
+        // lepton 4-momentum info
+        features->ptLep2 = lep2.Pt();
+        features->etaLep2 = lep2.Eta();
+        features->phiLep2 = lep2.Phi();
+        features->ELep2 = lep2.E();
+        features->pxLep2 = lep2.Px();
+        features->pyLep2 = lep2.Py();
+        features->pzLep2 = lep2.Pz();
 
-        // lepton info for distinguishing Maj/Dir
-        features->chargeLep = chargeLep;
-        Int_t lepisMu_ = 0, lepisEle_ = 0;
-        if (typeLep == 13) {
-            lepisMu_ = 1;
-            lepisEle_ = 0;
-        } else if (typeLep == 11) {
-            lepisMu_ = 0;
-            lepisEle_ = 1;
+        // lepton info
+        features->chargeLep1 = chargeLeps.first;
+        Int_t lep1isMu_ = 0, lep1isEle_ = 0;
+        if (typeLeps.first == 13) {
+            lep1isMu_ = 1; lep1isEle_ = 0;
+        } else if (typeLeps.first == 11) {
+            lep1isMu_ = 0; lep1isEle_ = 1;
         }
-        features->lepisMu = lepisMu_;
-        features->lepisEle = lepisEle_;
+        features->lep1isMu = lep1isMu_;
+        features->lep1isEle = lep1isEle_;
+
+        // lepton info
+        features->chargeLep2 = chargeLeps.second;
+        Int_t lep2isMu_ = 0, lep2isEle_ = 0;
+        if (typeLeps.second == 13) {
+            lep2isMu_ = 1; lep2isEle_ = 0;
+        } else if (typeLeps.second == 11) {
+            lep2isMu_ = 0; lep2isEle_ = 1;
+        }
+        features->lep2isMu = lep2isMu_;
+        features->lep2isEle = lep2isEle_;
 
         // W boson 4-momentum info
         features->mJJ = jj.M();
@@ -318,18 +345,31 @@ void allinone_ISR(
         features->pzJJ = jj.Pz();
 
         // HNL 4-momentum info
-        features->mN = N.M();
-        features->EN = N.E();
-        features->PN = N.P();
-        features->ptN = N.Pt();
-        features->etaN = N.Eta();
-        features->phiN = N.Phi();
-        features->pxN = N.Px();
-        features->pyN = N.Py();
-        features->pzN = N.Pz();
+        features->mN1 = N1.M();
+        features->EN1 = N1.E();
+        features->PN1 = N1.P();
+        features->ptN1 = N1.Pt();
+        features->etaN1 = N1.Eta();
+        features->phiN1 = N1.Phi();
+        features->pxN1 = N1.Px();
+        features->pyN1 = N1.Py();
+        features->pzN1 = N1.Pz();
+
+        // HNL 4-momentum info
+        features->mN2 = N2.M();
+        features->EN2 = N2.E();
+        features->PN2 = N2.P();
+        features->ptN2 = N2.Pt();
+        features->etaN2 = N2.Eta();
+        features->phiN2 = N2.Phi();
+        features->pxN2 = N2.Px();
+        features->pyN2 = N2.Py();
+        features->pzN2 = N2.Pz();
+
+        features->mJJLep1Lep2 = JJLep1Lep2.M();
 
         // angular distance between the (two jets) and (W and lepton)
-        Float_t DeltaRjj = 99999, DeltaRjjl = 99999;
+        Float_t DeltaRjj = 99999;
         // angular distance between the two jets, only if there are two jets in VLC branch
         Float_t EJ1 = 99999, ptJ1 = 99999, etaJ1 = 99999, phiJ1 = 99999;
         Float_t EJ2 = 99999, ptJ2 = 99999, etaJ2 = 99999, phiJ2 = 99999;
@@ -368,11 +408,17 @@ void allinone_ISR(
         features->tau2 = tau2_;
 
         // angular distance between the W and lepton
-        Float_t jjlEtaDiff = jj.Eta() - lep.Eta();
-        Float_t jjlPhiDiff = deltaPhi(jj.Phi(), lep.Phi());
-        DeltaRjjl = pow(jjlEtaDiff * jjlEtaDiff + jjlPhiDiff * jjlPhiDiff, 0.5);
-        features->DeltaRjjl = DeltaRjjl;
-        features->DeltaPhijjl = jjlPhiDiff;  // the phi difference between the W and lepton
+        Float_t DeltaRjjl1 = 99999, DeltaRjjl2 = 99999;
+        Float_t jjl1EtaDiff = jj.Eta() - lep1.Eta();
+        Float_t jjl1PhiDiff = deltaPhi(jj.Phi(), lep1.Phi());
+        DeltaRjjl1 = pow(jjl1EtaDiff * jjl1EtaDiff + jjl1PhiDiff * jjl1PhiDiff, 0.5);
+        features->DeltaRjjl1 = DeltaRjjl1;
+        features->DeltaPhijjl1 = jjl1PhiDiff;  // the phi difference between the W and lepton
+        Float_t jjl2EtaDiff = jj.Eta() - lep2.Eta();
+        Float_t jjl2PhiDiff = deltaPhi(jj.Phi(), lep2.Phi());
+        DeltaRjjl2 = pow(jjl2EtaDiff * jjl2EtaDiff + jjl2PhiDiff * jjl2PhiDiff, 0.5);
+        features->DeltaRjjl2 = DeltaRjjl2;
+        features->DeltaPhijjl2 = jjl2PhiDiff;  // the phi difference between the W and lepton
 
         // extra, just for trial
         // the forward muon info, for distinguishing the ISR mu-photon interaction
@@ -381,10 +427,15 @@ void allinone_ISR(
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
             ptFwmu = fwmu->PT;
-            // cout << " fwmu: " << fwmu->PT << "\n";
+            cout << " fwmu: " << fwmu->PT << "\n";
         }
         features->ptFwMu = ptFwmu;
 
+        features->ptNTrue = NTrue.Pt();
+        features->ENTrue = NTrue.E();
+        features->etaNTrue = NTrue.Eta();
+
+        features->ptJJTrue = jjTrue.Pt();
         features->EJJTrue = jjTrue.E();
         features->PJJTrue = jjTrue.P();
         features->etaJJTrue = jjTrue.Eta();
@@ -393,6 +444,7 @@ void allinone_ISR(
         features->etaLepTrue = lepTrue.Eta();
         features->phiLepTrue = lepTrue.Phi();
         features->ptLepTrue = lepTrue.Pt();
+        features->ELepTrue = lepTrue.E();
         features->pxLepTrue = lepTrue.Px();
         features->pyLepTrue = lepTrue.Py();
         features->pzLepTrue = lepTrue.Pz();
@@ -400,44 +452,11 @@ void allinone_ISR(
         Int_t nJetcon;
         Jet* wjet1 = (Jet*)branchVLC1Jet->At(0);
 
-        // cout << " true eta: " << jjTrue.Eta() << "\n";
-        // cout << " reco eta: " << jj.Eta() << "\n";
-        // cout << " true phi: " << jjTrue.Phi() << "\n";
-        // cout << " reco phi: " << jj.Phi() << "\n";
-        // cout << " true E:   " << jjTrue.E() << "\n";
-        // cout << " reco E:   " << jj.E() << "\n";
-        // cout << endl;
-
         Int_t nTracks;
         nTracks = branchTrack->GetEntries();
 
-        Int_t chargeLep2 = 999;
-        Int_t lep2isEle = 999;
-        Int_t lep2isMu = 999;
-        if (iFS.iLeps.size() == 2) {
-            // cout << ".. " <<endl;
-            TLorentzVector lep2;
-             
-            // cout << endl;
-            // cout << i_en << endl;
-            for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
-                TLorentzVector lepI = iFS.iLeps[il];
-                // cout << iFS.iLepCharges[il]<< endl;
-                if (lepI.Eta() == lep.Eta()) continue;
-                chargeLep2 = iFS.iLepCharges[il];
-                if (iFS.typeLeps[il] == 11) {
-                    lep2isEle = 1;
-                    lep2isMu = 0;
-                } else if (iFS.typeLeps[il] == 13) {
-                    lep2isEle = 0;
-                    lep2isMu = 1;
-                }
-            }
-        }
-        features->chargeLep2 = chargeLep2;
-        features->lep2isEle = lep2isEle;
-        features->lep2isMu = lep2isMu;
-        // cout << features->chargeLep2<<endl;
+
+
 
         tr.Fill();
     }
@@ -453,7 +472,7 @@ void allinone_ISR(
         cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
         cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
         cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
-        cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
+        cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
         cout << "\t# after jj mass cut \t(" << WMLowCut << " <= m(jj) <= " << float(WMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;
         cout << "\t---------------------------------------------------------------------------------" << endl;
         cout << "\t\t\t\t\t\tTotal eff.:\t" << nJJM << " / " << nEv << "\t(" << 100 * float(nJJM) / float(nEv) << " %) " << endl;

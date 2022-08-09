@@ -32,27 +32,14 @@ extern Float_t mWPDG, widthWPDG;
 Float_t mWPDG = WPDG->Mass();
 Float_t widthWPDG = WPDG->Width();
 
-// iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet, TClonesArray* branchVLC3Jet) {
 iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
     iFinalStates iFinalStatesIndexes;
     Int_t nElectrons = branchElectron->GetEntries();
     Int_t nMuons = branchMuon->GetEntries();
     Int_t nVLC1Jets = branchVLC1Jet->GetEntries();
     Int_t nVLC2Jets = branchVLC2Jet->GetEntries();
-    // Int_t nVLC3Jets = branchVLC3Jet->GetEntries();
 
-    // Int_t iTauJet = 0;
-    // Int_t tauTagged = 0;
-    //// searching for jet that is tagged as tau
-    // for (Int_t ij3 = 0; ij3 < nVLC3Jets; ij3++) {
-    // Jet* jet3 = (Jet*)branchVLC3Jet->At(ij3);
-    // if (jet3->TauTag == 1) {
-    // tauTagged = 1;
-    // iTauJet = ij3;
-    //}
-    //}
-
-    //  require at least one lepton
+    //  require at least two leptons
     // if (nElectrons + nMuons < 1 && tauTagged == 0) return iFinalStatesIndexes;
     if (nElectrons + nMuons < 2) return iFinalStatesIndexes;
     // require there be 1 or 2 jets, from W>qq
@@ -171,28 +158,54 @@ TLorentzVector deduceTau(TLorentzVector tauJet, TLorentzVector jj) {
 
 // since in VBF, there are at least two leptons
 // pick the one with smallest P as the one decayed from HNL
-TLorentzVector getLep(iFinalStates iFS, TLorentzVector jj, Int_t* typeLep, Int_t* chargeLep) {
+void getLep(iFinalStates iFS, TLorentzVector jj, pair<Int_t, Int_t>* typeLeps, pair<Int_t, Int_t>* chargeLeps, pair<TLorentzVector, TLorentzVector>* leps) {
     // loop over all the leptons
-    Float_t pLepMin = 99999;
-    Int_t chargeLep_;
-    Int_t typeLep_;
-    TLorentzVector lepBest;
-    // cout << iFS.iLepCharges.size() << endl;
-    for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
-        TLorentzVector lepI = iFS.iLeps[il];
-
-        // if this is tau, then correct it before comparing the pT
-        if (iFS.typeLeps[il] == 15) lepI = deduceTau(lepI, jj);
-
-        // store the lepton with min. P among all
-        if (lepI.P() < pLepMin) {
-            pLepMin = lepI.Pt();
-            lepBest = lepI;
-            chargeLep_ = iFS.iLepCharges[il];
-            typeLep_ = iFS.typeLeps[il];
+    pair<Int_t, Int_t> chargeLeps_;
+    pair<Int_t, Int_t> typeLeps_;
+    pair<TLorentzVector, TLorentzVector> leps_;
+    
+    vector<TLorentzVector> twoLeps = {}; 
+    vector<Int_t> twoCharges = {};
+    vector<Int_t> twoTypes = {};
+    if (iFS.iLepCharges.size() == 2) {
+        twoLeps.push_back(iFS.iLeps[0]); twoLeps.push_back(iFS.iLeps[1]);
+        twoCharges.push_back(iFS.iLepCharges[0]); twoCharges.push_back(iFS.iLepCharges[1]);
+        twoTypes.push_back(iFS.typeLeps[0]); twoTypes.push_back(iFS.typeLeps[1]);
+        
+    } else  {
+        Int_t indexMin = 99999;
+        Float_t etaMin = 99999;
+        for (Int_t _ = 0; _ < 2; _++) {
+            for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
+                if (il == indexMin) continue;
+                TLorentzVector lepI = iFS.iLeps[il];
+                if (abs(lepI.Eta()) < etaMin) {
+                    etaMin = abs(lepI.Eta());
+                    indexMin = il;
+                }
+            }
+            TLorentzVector lepI = iFS.iLeps[indexMin];
+            twoLeps.push_back(iFS.iLeps[indexMin]);
+            twoCharges.push_back(iFS.iLepCharges[indexMin]);
+            twoTypes.push_back(iFS.typeLeps[indexMin]);
         }
     }
-    *typeLep = typeLep_;
-    *chargeLep = chargeLep_;
-    return lepBest;
+
+
+    TLorentzVector lep1, lep2;
+    lep1 = twoLeps[0]; lep2 = twoLeps[1];
+    if (lep1.Pt() > lep2.Pt()) {
+        leps_.first = lep1; leps_.second = lep2; 
+        typeLeps_.first = twoTypes[0]; typeLeps_.second= twoTypes[1]; 
+        chargeLeps_.first = twoCharges[0]; chargeLeps_.second= twoCharges[1]; 
+    } else {
+        leps_.first = lep2; leps_.second = lep1; 
+        typeLeps_.first = twoTypes[1]; typeLeps_.second= twoTypes[0]; 
+        chargeLeps_.first = twoCharges[1]; chargeLeps_.second= twoCharges[0]; 
+    }
+
+    *typeLeps = typeLeps_;
+    *chargeLeps = chargeLeps_;
+    *leps = leps_;
 }
+
