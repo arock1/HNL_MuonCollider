@@ -254,7 +254,8 @@ void allinone_ISR(
         iFinalStates iFS;
         // finding final states: at least two leptons + 1 (or 2) jet
         iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
-        if (all_on && iFS.foundAll == 0) continue;
+        // if (all_on && iFS.foundAll == 0) continue;
+        if (iFS.foundAll == 0) continue;
         nFS += 1;  // found the targeted final states
 
         TLorentzVector jet1, jet21, jet22, jet2;
@@ -427,7 +428,7 @@ void allinone_ISR(
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
             ptFwmu = fwmu->PT;
-            cout << " fwmu: " << fwmu->PT << "\n";
+            // cout << " fwmu: " << fwmu->PT << "\n";
         }
         features->ptFwMu = ptFwmu;
 

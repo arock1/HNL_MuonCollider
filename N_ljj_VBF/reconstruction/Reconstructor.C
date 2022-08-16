@@ -167,23 +167,26 @@ void getLep(iFinalStates iFS, TLorentzVector jj, pair<Int_t, Int_t>* typeLeps, p
     vector<TLorentzVector> twoLeps = {}; 
     vector<Int_t> twoCharges = {};
     vector<Int_t> twoTypes = {};
-    if (iFS.iLepCharges.size() == 2) {
+    if (iFS.iLepCharges.size() == 2) { // if there are exactly two leptons, then just append them
         twoLeps.push_back(iFS.iLeps[0]); twoLeps.push_back(iFS.iLeps[1]);
         twoCharges.push_back(iFS.iLepCharges[0]); twoCharges.push_back(iFS.iLepCharges[1]);
         twoTypes.push_back(iFS.typeLeps[0]); twoTypes.push_back(iFS.typeLeps[1]);
         
-    } else  {
-        Int_t indexMin = 99999;
-        Float_t etaMin = 99999;
-        for (Int_t _ = 0; _ < 2; _++) {
+    } else  {   // if more than two leptons, use the two with min |eta|
+        Int_t indexMinFirst = 99999; // index for the smallest eta
+        for (Int_t _ = 0; _ < 2; _++) { // looking foe two leptons
+            // init the index and min eta for this round
+            Int_t indexMin = 99999;
+            Float_t etaMin = 99999;
             for (Int_t il = 0; il < iFS.iLepCharges.size(); il++) {
-                if (il == indexMin) continue;
+                if (il == indexMinFirst) continue; // skip the smallest eta one 
                 TLorentzVector lepI = iFS.iLeps[il];
-                if (abs(lepI.Eta()) < etaMin) {
+                if (abs(lepI.Eta()) < etaMin) { // find the smallest 
                     etaMin = abs(lepI.Eta());
                     indexMin = il;
                 }
             }
+            if (_ == 0) indexMinFirst = indexMin; 
             TLorentzVector lepI = iFS.iLeps[indexMin];
             twoLeps.push_back(iFS.iLeps[indexMin]);
             twoCharges.push_back(iFS.iLepCharges[indexMin]);
@@ -192,6 +195,8 @@ void getLep(iFinalStates iFS, TLorentzVector jj, pair<Int_t, Int_t>* typeLeps, p
     }
 
 
+    // store the lepton according to their pt 
+    // larger pT be the first 
     TLorentzVector lep1, lep2;
     lep1 = twoLeps[0]; lep2 = twoLeps[1];
     if (lep1.Pt() > lep2.Pt()) {
