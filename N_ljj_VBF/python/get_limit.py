@@ -154,9 +154,9 @@ df_bdt_test_s.loc[:, 'preds'] = 1 - xgbc1.predict_proba(X_test)[:, 0]
 def bdt_cut(df, cut):
     df1 = df[(df['preds'] >= cut)]    # pass cut to be classified as HNL
 #    "/ 2" because the samples include M & D. now assume they are just half half
-        S1 = df1[df1['target'] != 0]['weight'].values.sum() / 2    # Number of signals
-            B1 = df1[df1['target'] == 0]['weight'].values.sum()    # Number of bkg.
-                return ((S1+B1)**0.5, (0.1*B1), S1/(np.sqrt(S1+B1)))
+    S1 = df1[df1['target'] != 0]['weight'].values.sum() / 2    # Number of signals
+    B1 = df1[df1['target'] == 0]['weight'].values.sum()    # Number of bkg.
+    return ((S1+B1)**0.5, (0.1*B1), S1/(np.sqrt(S1+B1)))
 
 
 
