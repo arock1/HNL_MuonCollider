@@ -192,7 +192,8 @@ void allinone_ISR(
 
     // tracing the number of events are each cut
     Int_t nEv = 0;          // # of events in truth level
-    Int_t nFS = 0;          // # of events having identified final states
+    Int_t nFSLep = 0;          // # of events having identified final states
+    Int_t nFSJet = 0;          // # of events having identified final states
     Int_t nLepEta = 0;      // # of events after lep eta cut
     Int_t nLepPt = 0;       // # of events after lep pt cut
     Int_t nJJPt = 0;        // # of events after jj pt cut
@@ -251,12 +252,26 @@ void allinone_ISR(
         //========================================================================
         //=======================      Reconstruction      =======================
         //========================================================================
-        iFinalStates iFS;
+        iFinalStates iFS, iFSLep, iFSJet;
         // finding final states: at least two leptons + 1 (or 2) jet
-        iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
-        // if (all_on && iFS.foundAll == 0) continue;
-        if (iFS.foundAll == 0) continue;
-        nFS += 1;  // found the targeted final states
+        iFSLep = FindFinalStatesLepsIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
+        if (iFSLep.foundAll == 0) continue;
+        nFSLep += 1;
+        iFSJet = FindFinalStatesJetsIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
+        if (iFSJet.foundAll == 0) continue;
+        nFSJet += 1;  // found the targeted final states
+
+        iFS.iLeps = iFSLep.iLeps;
+        iFS.typeLeps = iFSLep.typeLeps;
+        iFS.iElectronIndeces = iFSLep.iElectronIndeces; 
+        iFS.iMuonIndeces = iFSLep.iMuonIndeces; 
+        iFS.iTauIndeces = iFSLep.iTauIndeces;
+        iFS.iLepCharges = iFSLep.iLepCharges;
+        iFS.i1Jets = iFSJet.i1Jets;
+        iFS.i2Jets = iFSJet.i2Jets;
+        iFS.tau1 = iFSJet.tau1;
+        iFS.tau2 = iFSJet.tau2;
+
 
         TLorentzVector jet1, jet21, jet22, jet2;
         TLorentzVector lep1, lep2, jj, N1, N2, JJLep1Lep2;
@@ -470,8 +485,10 @@ void allinone_ISR(
         cout << "\t---------------------------------------------------------------------------------" << endl;
 
         cout << "\t# of targeted events in truth level:\t\t\t" << nEv << endl;
-        cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
-        cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFS) << "%)" << endl;
+        // cout << "\t# after identified final states:\t\t\t" << nFS << "\t(" << 100 * float(nFS) / float(nEv) << "%)" << endl;
+        cout << "\t# after identified final leps:\t\t\t\t" << nFSLep << "\t(" << 100 * float(nFSLep) / float(nEv) << "%)" << endl;
+        cout << "\t# after identified final jets:\t\t\t\t" << nFSJet << "\t(" << 100 * float(nFSJet) / float(nFSLep) << "%)" << endl;
+        cout << "\t# after lepton eta cut \t(eta(l) <= " << float(lepEtaCut) << "):\t\t" << nLepEta << "\t(" << 100 * float(nLepEta) / float(nFSJet) << "%)" << endl;
         cout << "\t# after lepton pt cut \t(pT(l) >= " << float(lepPtCut) << "):\t\t\t" << nLepPt << "\t(" << 100 * float(nLepPt) / float(nLepEta) << "%)" << endl;
         cout << "\t# after jj pt cut \t(pT(jj) >= " << float(jjPtCut) << "):\t\t\t" << nJJPt << "\t(" << 100 * float(nJJPt) / float(nLepPt) << "%)" << endl;
         cout << "\t# after jj mass cut \t(" << WMLowCut << " <= m(jj) <= " << float(WMHighCut) << "):\t" << nJJM << "\t(" << 100 * float(nJJM) / float(nJJPt) << "%)" << endl;

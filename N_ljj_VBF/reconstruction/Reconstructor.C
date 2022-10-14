@@ -32,6 +32,7 @@ extern Float_t mWPDG, widthWPDG;
 Float_t mWPDG = WPDG->Mass();
 Float_t widthWPDG = WPDG->Width();
 
+/*
 iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
     iFinalStates iFinalStatesIndexes;
     Int_t nElectrons = branchElectron->GetEntries();
@@ -93,7 +94,75 @@ iFinalStates FindFinalStatesIndex(TClonesArray* branchElectron, TClonesArray* br
 
     return iFinalStatesIndexes;
 }
+*/
 
+
+iFinalStates FindFinalStatesLepsIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
+    iFinalStates iFinalStatesIndexes;
+    Int_t nElectrons = branchElectron->GetEntries();
+    Int_t nMuons = branchMuon->GetEntries();
+
+    //  require at least two leptons
+    // if (nElectrons + nMuons < 1 && tauTagged == 0) return iFinalStatesIndexes;
+    if (nElectrons + nMuons < 2) return iFinalStatesIndexes;
+
+    TLorentzVector lep;
+    Electron* electron1;
+    for (Int_t iel = 0; iel < nElectrons; iel++) {
+        electron1 = (Electron*)branchElectron->At(iel);
+        lep.SetPtEtaPhiM(electron1->PT, electron1->Eta, electron1->Phi, 0);  // assumed lepton to be massless
+        iFinalStatesIndexes.iLeps.push_back(lep);
+        iFinalStatesIndexes.iElectronIndeces.push_back(iel);
+        iFinalStatesIndexes.iLepCharges.push_back(electron1->Charge);
+        iFinalStatesIndexes.typeLeps.push_back(11);
+    }
+    Muon* muon1;
+    for (Int_t imu = 0; imu < nMuons; imu++) {
+        muon1 = (Muon*)branchMuon->At(imu);
+        lep.SetPtEtaPhiM(muon1->PT, muon1->Eta, muon1->Phi, 0);  // assumed lepton to be massless
+        iFinalStatesIndexes.iLeps.push_back(lep);
+        iFinalStatesIndexes.iMuonIndeces.push_back(imu);
+        iFinalStatesIndexes.iLepCharges.push_back(muon1->Charge);
+        iFinalStatesIndexes.typeLeps.push_back(13);
+    }
+
+    iFinalStatesIndexes.foundAll = 1;  // flag to process
+
+    return iFinalStatesIndexes;
+}
+
+iFinalStates FindFinalStatesJetsIndex(TClonesArray* branchElectron, TClonesArray* branchMuon, TClonesArray* branchVLC1Jet, TClonesArray* branchVLC2Jet) {
+    iFinalStates iFinalStatesIndexes;
+    Int_t nVLC1Jets = branchVLC1Jet->GetEntries();
+    Int_t nVLC2Jets = branchVLC2Jet->GetEntries();
+
+    TLorentzVector jet1;
+    TLorentzVector jet21, jet22, jet2;
+    if (nVLC1Jets == 1) {
+        Jet* jetVLC1 = (Jet*)branchVLC1Jet->At(0);
+        jet1.SetPtEtaPhiM(jetVLC1->PT, jetVLC1->Eta, jetVLC1->Phi, jetVLC1->Mass);
+        iFinalStatesIndexes.i1Jets.push_back(jet1);  // save jet
+        iFinalStatesIndexes.tau1 = jetVLC1->Tau[0];
+        iFinalStatesIndexes.tau2 = jetVLC1->Tau[1];
+    }
+    if (nVLC2Jets == 2) {
+        Jet* jetVLC21 = (Jet*)branchVLC2Jet->At(0);
+        Jet* jetVLC22 = (Jet*)branchVLC2Jet->At(1);
+        jet21.SetPtEtaPhiM(jetVLC21->PT, jetVLC21->Eta, jetVLC21->Phi, jetVLC21->Mass);
+        jet22.SetPtEtaPhiM(jetVLC22->PT, jetVLC22->Eta, jetVLC22->Phi, jetVLC22->Mass);
+        if (jet21.Pt() > jet22.Pt()) {
+            iFinalStatesIndexes.i2Jets.push_back(jet21);  // save jet
+            iFinalStatesIndexes.i2Jets.push_back(jet22);  // save jet
+        } else {
+            iFinalStatesIndexes.i2Jets.push_back(jet22);  // save jet
+            iFinalStatesIndexes.i2Jets.push_back(jet21);  // save jet
+        }
+    }
+
+    iFinalStatesIndexes.foundAll = 1;  // flag to process
+
+    return iFinalStatesIndexes;
+}
 TLorentzVector getWJet(iFinalStates iFS) {
     // if there are both one jet and two jets, then pick the one with mass closest to W boson
     // if there is only one(two) jet, then assign that as an W jet
