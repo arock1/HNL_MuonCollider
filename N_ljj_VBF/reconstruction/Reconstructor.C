@@ -135,6 +135,7 @@ iFinalStates FindFinalStatesJetsIndex(TClonesArray* branchElectron, TClonesArray
     iFinalStates iFinalStatesIndexes;
     Int_t nVLC1Jets = branchVLC1Jet->GetEntries();
     Int_t nVLC2Jets = branchVLC2Jet->GetEntries();
+    if (nVLC1Jets != 1 && nVLC2Jets != 2) return iFinalStatesIndexes;
 
     TLorentzVector jet1;
     TLorentzVector jet21, jet22, jet2;
