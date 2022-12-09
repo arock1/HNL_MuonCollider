@@ -149,13 +149,6 @@ void allinone_ISR(
 
     Int_t foundFiles;
     foundFiles = getFileNames(type, &inputFile_st, &outputFile_st);
-    // inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_CustomizedJet.root";
-    // outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV.root";
-    // inputFile_st = "../data/detector/signal_tchannel_E-3TeV_N-1TeV_Dirac_CustomizedJet.root";
-    // outputFile_st = "../../old/features/signal_tchannel_reco_E-3TeV_N-1TeV_Dirac.root";
-    // inputFile_st = "../data/detector/background_inclusive_E-3TeV_CustomizedJet.root";
-    // outputFile_st = "../../old/features/background_reco_E-3TeV.root";
-    // inputFile_st = "../../old/data/tesing_hepmc3.root";
 
     const char* inputFile = inputFile_st.c_str();
     const char* outputFile = outputFile_st.c_str();
@@ -181,7 +174,6 @@ void allinone_ISR(
     TClonesArray* branchMuon = treeReader->UseBranch("Muon");
     TClonesArray* branchVLC1Jet = treeReader->UseBranch("VLCjetR12N1");
     TClonesArray* branchVLC2Jet = treeReader->UseBranch("VLCjetR02N2");
-    // TClonesArray* branchVLC3Jet = treeReader->UseBranch("VLCjetR02N3");
     TClonesArray* branchMET = treeReader->UseBranch("MissingET");
     TClonesArray* branchFwMu = treeReader->UseBranch("ForwardMuon");
 
@@ -205,15 +197,9 @@ void allinone_ISR(
     BkgTypes bkgTypes;      // Count the type of bkg
     BkgTypes bkgTypesReco;  // count the type of bkg after reconstruction
 
-    // Float_t lepEtaCut = 2.5;                    // lep eta cut
-    // Float_t lepPtCut = 100;                     // lep pt cut
-    // Float_t jjPtCut = 100;                      // jj pt cut
-    // Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
-    // Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
-
     Float_t lepEtaCut = 2.5;                    // lep eta cut
-    Float_t lepPtCut = 0;                       // lep pt cut
-    Float_t jjPtCut = 0;                        // jj pt cut
+    Float_t lepPtCut = 100;                       // lep pt cut
+    Float_t jjPtCut = 100;                        // jj pt cut
     Float_t WMLowCut = mWPDG - 5 * widthWPDG;   // jj mass cut
     Float_t WMHighCut = mWPDG + 5 * widthWPDG;  // jj mass cut
 
@@ -251,7 +237,6 @@ void allinone_ISR(
             jet2True_ = iFSTrue.i2Jets[1];
             if (iFSTrue.iElectronIndeces.size() == 1) typeLepTrue = 11;
             if (iFSTrue.iMuonIndeces.size() == 1) typeLepTrue = 13;
-            if (iFSTrue.iTauIndeces.size() == 1) typeLepTrue = 15;
         }
 
         TLorentzVector jjTrue;
@@ -262,20 +247,27 @@ void allinone_ISR(
         //========================================================================
         iFinalStates iFS;
         // finding final states: lepton + 1 (or 2) jet
-        // iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet, branchVLC3Jet);
         iFS = FindFinalStatesIndex(branchElectron, branchMuon, branchVLC1Jet, branchVLC2Jet);
         if (all_on && iFS.foundAll == 0) continue;
         nFS += 1;  // found the targeted final states
 
+        // jet1: one fat jet
+        // jet21,22: two narrow jets; jet2: adding these to reco W jet
         TLorentzVector jet1, jet21, jet22, jet2;
+        jet1 = iFS.i1Jets[0];
+        jet21 = iFS.i2Jets[0];
+        jet22 = iFS.i2Jets[1];
+
         TLorentzVector lep, jj, N;
 
+        // decide to use one fat jet / two narrow jets
         jj = getWJet(iFS);
 
         Int_t chargeLep;
         Int_t typeLep;
+
+        // decide to use which lepton 
         lep = getLep(iFS, jj, &typeLep, &chargeLep);
-        // if (abs(lep.Eta()) > lepEtaCut) continue;
         nLepEta += 1;
 
         // reconstruct N
@@ -397,7 +389,6 @@ void allinone_ISR(
         if (nFwMu != 0) {
             Muon* fwmu = (Muon*)branchFwMu->At(0);
             ptFwmu = fwmu->PT;
-            // cout << " fwmu: " << fwmu->PT << "\n";
         }
         features->ptFwMu = ptFwmu;
 

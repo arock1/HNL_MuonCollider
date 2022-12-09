@@ -32,18 +32,12 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
     Int_t lepCharge;
 
     Int_t nParticles = branchParticle->GetEntries();
-    // cout << "\n\n\n Num of p: " << nParticles << endl;
 
     for (Int_t iN = 0; iN < nParticles; iN++) {
         foundN = 0;
         particle = (GenParticle*)branchParticle->At(iN);
-        // cout << particle->PID << endl;
 
         if (abs(particle->PID) == NPID) {  // find HNL
-
-            // cout << "\nN1 Mother1: " << particleNM1->PID << "\nN1 Mother2: " << particleNM2->PID << "\n";
-            // cout << "found N1" << endl;
-
             foundN = 1;
             iNTrue = iN;
 
@@ -52,34 +46,6 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
 
                 // if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13 || abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
                 if ((abs(particle0->PID) == 11 || abs(particle0->PID) == 13) && particle0->M1 == iNTrue) {
-                    // if ((abs(particle0->PID) == 15) && particle0->M1 == iNTrue) {
-                    //  cout << particle0->PID << endl;
-                    //  cout << " particle0: " << particle0->Eta << "\n";
-                    //  cout << "Found Lepton: " << particle0->PID << endl;
-                    //  cout << " particle0 eta : " << particle0->Eta << "\n";
-                    //  cout << " particle0 pt  : " << particle0->PT << "\n";
-
-                    // testing
-                    // for (Int_t i00 = 0; i00 < nParticles; i00++) {
-                    // GenParticle* particle000 = (GenParticle*)branchParticle->At(i00);
-                    //// if (particle000->M1 == i) cout << " text: \n";
-                    // if (particle000->M1 == i) cout << particle000->PID << endl;
-                    // if (abs(particle000->PID) == 15) {
-                    // for (Int_t i000 = 0; i000 < nParticles; i000++) {
-                    // GenParticle* particle0000 = (GenParticle*)branchParticle->At(i000);
-                    // if (particle0000->M1 == i00) cout << particle0000->PID << "\n\n";
-                    //// if (abs(particle0000->PID) == 15) {
-                    //// for (Int_t i0000 = 0; i0000 < nParticles; i0000++) {
-                    //// GenParticle* particle00000 = (GenParticle*)branchParticle->At(i0000);
-                    //// if (particle00000->M1 == i000) cout << particle00000->PID << "\n\n";
-                    ////}
-                    ////}
-                    //}
-                    //}
-                    //}
-                    //
-                    // end testing
-
                     foundLep = 1;
                     iLepTrue = i;
                     typeLep = abs(particle0->PID);
@@ -98,12 +64,10 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                     while (true) {               // loop to trace its history
                         if (abs(particle0M->PID) == NPID) {
                             if (abs(particle0->PID) % 2 == 1) {  // odd: down type quark
-                                // cout << "down: " << particle0->PID << endl;
                                 iQ1True = ii;
                                 foundQ1 = 1;
                             }
                             if (abs(particle0->PID) % 2 == 0) {  // even: up type quark
-                                // cout << "up  : " << particle0->PID << endl;
                                 iQ2True = ii;
                                 foundQ2 = 1;
                             }
@@ -130,9 +94,6 @@ Int_t ClassifySingal(TClonesArray* branchParticle, iFinalStates* iFSTrue, TLoren
                 Q1True_.SetPtEtaPhiM(Q1Particle->PT, Q1Particle->Eta, Q1Particle->Phi, 0);
                 Q2True_.SetPtEtaPhiM(Q2Particle->PT, Q2Particle->Eta, Q2Particle->Phi, 0);
                 NTrue_.SetPtEtaPhiE(NParticle->PT, NParticle->Eta, NParticle->Phi, NParticle->E);
-
-                // cout << " lep: " << lepTrue_.Pt() << "\n";
-                // cout << " lep: " << lepTrue_.Eta() << "\n";
 
                 iFSTrue_.iLeps.push_back(lepTrue_);
                 iFSTrue_.i2Jets.push_back(Q1True_);
