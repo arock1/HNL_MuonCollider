@@ -342,7 +342,7 @@ void allinone_ISR(
         Float_t EJ1 = 99999, ptJ1 = 99999, etaJ1 = 99999, phiJ1 = 99999;
         Float_t EJ2 = 99999, ptJ2 = 99999, etaJ2 = 99999, phiJ2 = 99999;
         if (iFS.i2Jets.size() == 2) {
-            Float_t jjEtaDiff = jet1.Eta() - jet2.Eta();
+            Float_t jjEtaDiff = jet21.Eta() - jet22.Eta();
             Float_t jjPhiDiff = deltaPhi(jet1.Phi(), jet2.Phi());
             DeltaRjj = pow(jjEtaDiff * jjEtaDiff + jjPhiDiff * jjPhiDiff, 0.5);
             // the energy of the jets, used as info to measure the imbalance
